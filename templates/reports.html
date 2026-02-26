@@ -1,0 +1,459 @@
+{% extends "base.html" %}
+
+{% block title %}报告查看{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2 class="mb-4">
+            <i class="fas fa-list me-2"></i>报告查看
+            <span class="loading-spinner ms-2">
+                <i class="fas fa-spinner fa-spin"></i>
+            </span>
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-table me-2"></i>最近报告
+                    <span class="badge bg-light text-dark ms-2" id="report-count">{{ reports|length }}</span>
+                </div>
+                <div>
+                    <button id="refresh-reports-btn" class="btn btn-light btn-sm">
+                        <i class="fas fa-redo me-1"></i>刷新
+                    </button>
+                    <button id="export-csv-btn" class="btn btn-light btn-sm ms-2">
+                        <i class="fas fa-download me-1"></i>导出CSV
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="reports-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>标题</th>
+                                <th>来源</th>
+                                <th>发现时间</th>
+                                <th>邮件状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if reports %}
+                                {% for report in reports %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>
+                                        <div class="fw-bold">{{ report.title }}</div>
+                                        <a href="{{ report.url }}" target="_blank" class="small text-decoration-none">
+                                            {{ report.url[:50] }}{% if report.url|length > 50 %}...{% endif %}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ report.source_website }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="small">{{ report.discovered_time }}</div>
+                                    </td>
+                                    <td>
+                                        {% if report.sent_status %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>已发送
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-clock me-1"></i>未发送
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{{ report.url }}" target="_blank" class="btn btn-outline-primary">
+                                                <i class="fas fa-external-link-alt"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-outline-success send-email-btn" data-id="{{ report.id }}" title="发送邮件">
+                                                <i class="fas fa-paper-plane"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-2x mb-3"></i>
+                                        <p class="mb-0">暂无报告数据</p>
+                                        <small>运行监控后，发现的报告将显示在这里</small>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        <small class="text-muted">
+                            显示 <span id="shown-count">{{ reports|length }}</span> 条报告
+                            {% if reports %}
+                                (最新 {{ reports|length }} 条)
+                            {% endif %}
+                        </small>
+                    </div>
+                    <div>
+                        <select id="limit-select" class="form-select form-select-sm" style="width: auto;">
+                            <option value="10">显示10条</option>
+                            <option value="20" selected>显示20条</option>
+                            <option value="50">显示50条</option>
+                            <option value="100">显示100条</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-chart-pie me-2"></i>报告统计
+            </div>
+            <div class="card-body">
+                <div id="stats-chart">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light">
+                                <h3 class="text-primary" id="total-count">0</h3>
+                                <small class="text-muted">总报告数</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light">
+                                <h3 class="text-success" id="sent-count">0</h3>
+                                <small class="text-muted">已发送</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light">
+                                <h3 class="text-warning" id="unsent-count">0</h3>
+                                <small class="text-muted">未发送</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h6>按来源统计</h6>
+                        <div id="source-stats" class="small">
+                            <p class="text-muted">加载中...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <i class="fas fa-tasks me-2"></i>批量操作
+            </div>
+            <div class="card-body">
+                <div class="alert alert-light">
+                    <p class="mb-2"><strong>批量邮件发送：</strong></p>
+                    <p class="small mb-3">可以批量发送未发送的报告邮件，避免遗漏通知。</p>
+                    
+                    <div class="d-grid gap-2">
+                        <button id="send-all-unsent-btn" class="btn btn-warning">
+                            <i class="fas fa-paper-plane me-2"></i>发送所有未发送报告
+                        </button>
+                        
+                        <button id="check-now-btn" class="btn btn-primary">
+                            <i class="fas fa-sync-alt me-2"></i>立即检查新报告
+                        </button>
+                        
+                        <button id="clear-reports-btn" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#clearModal">
+                            <i class="fas fa-trash me-2"></i>清空所有报告
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <h6>数据管理</h6>
+                    <div class="small">
+                        <p><strong>数据库文件：</strong> <code id="db-path">reports.db</code></p>
+                        <p><strong>最后更新：</strong> <span id="last-report-time">--:--:--</span></p>
+                        <p><strong>报告时间范围：</strong> <span id="report-time-range">-- 至 --</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 清空确认模态框 -->
+<div class="modal fade" id="clearModal" tabindex="-1" aria-labelledby="clearModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="clearModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>确认清空报告
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-radiation me-2"></i>
+                    <strong>警告：</strong>此操作将删除数据库中的所有报告记录，且无法恢复！
+                </div>
+                <p>确定要清空所有报告吗？</p>
+                <ul>
+                    <li>所有报告记录将被永久删除</li>
+                    <li>邮件发送状态记录也会被删除</li>
+                    <li>此操作无法撤销</li>
+                </ul>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="confirm-clear">
+                    <label class="form-check-label" for="confirm-clear">
+                        我确认理解此操作的后果
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" id="confirm-clear-btn" disabled>确认清空</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 页面加载完成
+    $(document).ready(function() {
+        // 初始化统计信息
+        function updateStatistics() {
+            const reports = {{ reports|tojson|safe }};
+            
+            // 更新总数
+            $('#total-count').text(reports.length);
+            
+            // 计算已发送和未发送数量
+            let sentCount = 0;
+            let unsentCount = 0;
+            let sources = {};
+            
+            reports.forEach(report => {
+                if (report.sent_status) {
+                    sentCount++;
+                } else {
+                    unsentCount++;
+                }
+                
+                // 统计来源
+                const source = report.source_website || '未知';
+                sources[source] = (sources[source] || 0) + 1;
+            });
+            
+            $('#sent-count').text(sentCount);
+            $('#unsent-count').text(unsentCount);
+            $('#shown-count').text(reports.length);
+            $('#report-count').text(reports.length);
+            
+            // 更新来源统计
+            let sourceHtml = '';
+            for (const [source, count] of Object.entries(sources)) {
+                const percentage = (count / reports.length * 100).toFixed(1);
+                sourceHtml += `
+                <div class="d-flex justify-content-between mb-1">
+                    <span>${source}</span>
+                    <span>
+                        <span class="badge bg-secondary me-2">${count}</span>
+                        <small class="text-muted">${percentage}%</small>
+                    </span>
+                </div>
+                `;
+            }
+            
+            if (sourceHtml) {
+                $('#source-stats').html(sourceHtml);
+            }
+            
+            // 更新报告时间范围
+            if (reports.length > 0) {
+                const times = reports.map(r => r.discovered_time).filter(t => t);
+                if (times.length > 0) {
+                    const sorted = times.sort();
+                    $('#last-report-time').text(sorted[0].substring(0, 19));
+                    $('#report-time-range').text(`${sorted[sorted.length-1].substring(0, 10)} 至 ${sorted[0].substring(0, 10)}`);
+                }
+            }
+        }
+        
+        // 初始化
+        updateStatistics();
+        
+        // 刷新报告按钮
+        $('#refresh-reports-btn').click(function() {
+            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>刷新中...');
+            
+            const limit = $('#limit-select').val();
+            
+            $.get('/api/reports?limit=' + limit, function(response) {
+                $('#refresh-reports-btn').prop('disabled', false).html('<i class="fas fa-redo me-1"></i>刷新');
+                
+                if (response.success) {
+                    // 重新加载页面以显示新数据
+                    location.reload();
+                } else {
+                    alert('刷新失败: ' + response.error);
+                }
+            });
+        });
+        
+        // 限制选择器
+        $('#limit-select').change(function() {
+            const limit = $(this).val();
+            window.location.href = '/reports?limit=' + limit;
+        });
+        
+        // 发送单个报告邮件按钮
+        $('.send-email-btn').click(function() {
+            const reportId = $(this).data('id');
+            const $btn = $(this);
+            
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+            
+            // 这里可以调用专门的发送邮件API
+            // 目前使用单次检查，它会发送所有新报告的邮件
+            $.post('/api/run_once', function(response) {
+                $btn.prop('disabled', false).html('<i class="fas fa-paper-plane"></i>');
+                
+                if (response.success) {
+                    alert('邮件发送请求已提交。系统将在下次检查时发送邮件。');
+                    // 刷新页面更新状态
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    alert('发送失败: ' + response.error);
+                }
+            });
+        });
+        
+        // 发送所有未发送报告按钮
+        $('#send-all-unsent-btn').click(function() {
+            if (!confirm('确定要发送所有未发送的报告邮件吗？')) return;
+            
+            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>发送中...');
+            
+            $.post('/api/send_unsent', function(response) {
+                $('#send-all-unsent-btn').prop('disabled', false).html('<i class="fas fa-paper-plane me-2"></i>发送所有未发送报告');
+                
+                if (response.success) {
+                    alert(response.message);
+                    location.reload();
+                } else {
+                    alert('发送失败: ' + response.error);
+                }
+            });
+        });
+        
+        // 立即检查按钮
+        $('#check-now-btn').click(function() {
+            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>检查中...');
+            
+            $.post('/api/run_once', function(response) {
+                $('#check-now-btn').prop('disabled', false).html('<i class="fas fa-sync-alt me-2"></i>立即检查新报告');
+                
+                if (response.success) {
+                    let message = response.message;
+                    if (response.results && Object.keys(response.results).length > 0) {
+                        message += '\n\n检查结果:\n';
+                        for (const [site, count] of Object.entries(response.results)) {
+                            message += `${site}: ${count} 个新报告\n`;
+                        }
+                        message += '\n页面将刷新显示新报告。';
+                    } else {
+                        message += '\n本次检查未发现新报告。';
+                    }
+                    
+                    alert(message);
+                    location.reload();
+                } else {
+                    alert('检查失败: ' + response.error);
+                }
+            });
+        });
+        
+        // 导出CSV按钮
+        $('#export-csv-btn').click(function() {
+            // 获取报告数据
+            const reports = {{ reports|tojson|safe }};
+            
+            if (reports.length === 0) {
+                alert('没有报告数据可导出');
+                return;
+            }
+            
+            // 创建CSV内容
+            let csv = '标题,链接,来源,发现时间,邮件状态\n';
+            
+            reports.forEach(report => {
+                const title = report.title.replace(/"/g, '""');
+                const url = report.url.replace(/"/g, '""');
+                const source = report.source_website || '';
+                const time = report.discovered_time || '';
+                const status = report.sent_status ? '已发送' : '未发送';
+                
+                csv += `"${title}","${url}","${source}","${time}","${status}"\n`;
+            });
+            
+            // 创建下载链接
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            
+            link.href = url;
+            link.download = `thinktank_reports_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert(`已导出 ${reports.length} 条报告到CSV文件`);
+        });
+        
+        // 清空确认复选框
+        $('#confirm-clear').change(function() {
+            $('#confirm-clear-btn').prop('disabled', !$(this).is(':checked'));
+        });
+        
+        // 确认清空按钮
+        $('#confirm-clear-btn').click(function() {
+            // 这里需要实现清空数据库的功能
+            // 由于安全原因，暂时不实现此功能
+            alert('清空报告功能需要后端API支持，当前版本暂未实现。\n\n如需清空报告，请手动删除数据库文件或使用命令行工具。');
+            $('#clearModal').modal('hide');
+        });
+        
+        // 自动刷新报告列表（每60秒）
+        setInterval(function() {
+            $.get('/api/reports?limit=5', function(response) {
+                if (response.success && response.reports.length > 0) {
+                    // 如果有新报告，显示提示
+                    const currentCount = $('#report-count').text();
+                    if (response.count > parseInt(currentCount)) {
+                        $('#refresh-reports-btn').addClass('btn-warning').removeClass('btn-light');
+                    }
+                }
+            });
+        }, 60000);
+    });
+</script>
+{% endblock %}

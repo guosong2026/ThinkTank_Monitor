@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+
+{% block title %}邮箱设置{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2 class="mb-4">
+            <i class="fas fa-cog me-2"></i>邮箱设置
+            <span class="loading-spinner ms-2">
+                <i class="fas fa-spinner fa-spin"></i>
+            </span>
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-envelope me-2"></i>收件人邮箱设置
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    当监控发现新报告时，系统会发送邮件通知到以下邮箱。多个邮箱请用逗号分隔。
+                </div>
+                
+                <form id="email-settings-form">
+                    <div class="mb-3">
+                        <label for="recipient-emails" class="form-label">
+                            <i class="fas fa-users me-1"></i>收件人邮箱列表
+                        </label>
+                        <textarea 
+                            class="form-control" 
+                            id="recipient-emails" 
+                            rows="4" 
+                            placeholder="请输入邮箱地址，多个邮箱用逗号或换行分隔。例如：&#10;user1@example.com&#10;user2@example.com"
+                            required
+                        >{% if status.recipient_emails %}{{ status.recipient_emails|join('&#10;') }}{% endif %}</textarea>
+                        <div class="form-text">
+                            每行一个邮箱地址，或使用逗号分隔多个邮箱。
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="check-interval" class="form-label">
+                            <i class="fas fa-clock me-1"></i>检查间隔（小时）
+                        </label>
+                        <input 
+                            type="number" 
+                            class="form-control" 
+                            id="check-interval" 
+                            min="0.1" 
+                            max="24" 
+                            step="0.1" 
+                            value="{{ status.check_interval_hours }}"
+                            required
+                        >
+                        <div class="form-text">
+                            监控检查的时间间隔，建议设置为1-6小时之间。
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="button" id="cancel-btn" class="btn btn-outline-secondary me-2">
+                            <i class="fas fa-times me-2"></i>取消
+                        </button>
+                        <button type="submit" id="save-btn" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>保存设置
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header bg-warning text-white">
+                <i class="fas fa-envelope-open-text me-2"></i>邮件发送配置
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>注意：</strong>发件人邮箱和SMTP配置需要在 <code>email_sender.py</code> 文件中手动配置。
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>当前配置</h5>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                发件人邮箱
+                                <span class="badge bg-secondary" id="sender-email">加载中...</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                SMTP服务器
+                                <span class="badge bg-secondary" id="smtp-server">加载中...</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                SMTP端口
+                                <span class="badge bg-secondary" id="smtp-port">加载中...</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h5>配置说明</h5>
+                        <div class="alert alert-light">
+                            <p class="mb-2"><strong>如何修改发件人配置：</strong></p>
+                            <ol class="small">
+                                <li>编辑 <code>email_sender.py</code> 文件</li>
+                                <li>修改以下配置项：
+                                    <ul>
+                                        <li><code>SENDER_EMAIL</code> - 发件人邮箱</li>
+                                        <li><code>SENDER_PASSWORD</code> - SMTP授权码</li>
+                                        <li><code>SMTP_SERVER</code> - SMTP服务器地址</li>
+                                        <li><code>SMTP_PORT</code> - SMTP端口</li>
+                                    </ul>
+                                </li>
+                                <li>保存文件并重启Web服务</li>
+                            </ol>
+                        </div>
+                        
+                        <button type="button" id="test-email-btn" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-paper-plane me-1"></i>测试邮件发送
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-question-circle me-2"></i>使用说明
+            </div>
+            <div class="card-body">
+                <h5>邮箱设置说明</h5>
+                <div class="small">
+                    <p><strong>收件人邮箱：</strong></p>
+                    <ul>
+                        <li>系统发现新报告时，会自动发送邮件通知到这些邮箱</li>
+                        <li>支持多个收件人，每行一个邮箱或逗号分隔</li>
+                        <li>邮箱格式应为：username@domain.com</li>
+                    </ul>
+                    
+                    <p><strong>检查间隔：</strong></p>
+                    <ul>
+                        <li>监控任务执行的时间间隔</li>
+                        <li>单位：小时，支持小数（如0.5表示30分钟）</li>
+                        <li>建议值：1-6小时，避免过于频繁请求</li>
+                    </ul>
+                    
+                    <p><strong>注意事项：</strong></p>
+                    <ul>
+                        <li>保存设置后，需要重新启动监控才能生效</li>
+                        <li>发件人配置需要单独在配置文件中修改</li>
+                        <li>确保发件人邮箱已开启SMTP服务</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header bg-success text-white">
+                <i class="fas fa-bell me-2"></i>邮件通知示例
+            </div>
+            <div class="card-body">
+                <div class="alert alert-light">
+                    <p class="mb-1"><strong>邮件标题：</strong></p>
+                    <p class="small mb-2">【新报告监控】来自[网站名称]的新发布</p>
+                    
+                    <p class="mb-1"><strong>邮件内容：</strong></p>
+                    <div class="small border rounded p-2 bg-white">
+                        <p class="mb-1"><strong>标题：</strong>[报告标题]</p>
+                        <p class="mb-1"><strong>链接：</strong>[报告链接]</p>
+                        <p class="mb-1"><strong>发现时间：</strong>2024-01-01 12:00:00</p>
+                        <hr class="my-1">
+                        <p class="mb-0 text-muted">此邮件由网站监控工具自动发送</p>
+                    </div>
+                </div>
+                
+                <button type="button" id="send-test-email-btn" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-envelope me-1"></i>发送测试邮件
+                </button>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header bg-secondary text-white">
+                <i class="fas fa-history me-2"></i>设置状态
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <p><strong>最后保存时间：</strong> <span id="last-save-time">--:--:--</span></p>
+                    <p><strong>收件人数量：</strong> <span id="recipient-count">{{ status.recipient_emails|length if status.recipient_emails else 0 }}</span></p>
+                    <p><strong>检查间隔：</strong> <span id="current-interval">{{ status.check_interval_hours }}</span> 小时</p>
+                    <p><strong>监控状态：</strong> 
+                        {% if status.monitor_enabled %}
+                        <span class="text-success">启用</span>
+                        {% else %}
+                        <span class="text-danger">禁用</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 页面加载完成
+    $(document).ready(function() {
+        // 加载发件人配置
+        function loadSenderConfig() {
+            // 这里可以扩展为从API获取发件人配置
+            // 目前显示静态信息（来自email_sender.py的默认值）
+            $('#sender-email').text('your_email@outlook.com');
+            $('#smtp-server').text('smtp.office365.com');
+            $('#smtp-port').text('587');
+        }
+        
+        // 初始化
+        loadSenderConfig();
+        
+        // 取消按钮
+        $('#cancel-btn').click(function() {
+            if (confirm('确定要取消吗？未保存的更改将丢失。')) {
+                window.location.href = '/';
+            }
+        });
+        
+        // 表单提交
+        $('#email-settings-form').submit(function(e) {
+            e.preventDefault();
+            
+            // 获取邮箱列表
+            let emailsText = $('#recipient-emails').val().trim();
+            let emails = [];
+            
+            if (emailsText) {
+                // 分割邮箱：支持逗号、分号、换行分隔
+                emails = emailsText.split(/[,;\n]+/)
+                    .map(email => email.trim())
+                    .filter(email => email.length > 0 && email.includes('@'));
+            }
+            
+            // 获取检查间隔
+            let checkInterval = parseFloat($('#check-interval').val());
+            if (isNaN(checkInterval) || checkInterval < 0.1) {
+                alert('检查间隔必须大于等于0.1小时');
+                return;
+            }
+            
+            if (checkInterval > 24) {
+                alert('检查间隔不能超过24小时');
+                return;
+            }
+            
+            // 验证邮箱格式
+            let invalidEmails = [];
+            let validEmails = [];
+            
+            emails.forEach(email => {
+                if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                    invalidEmails.push(email);
+                } else {
+                    validEmails.push(email);
+                }
+            });
+            
+            if (invalidEmails.length > 0) {
+                alert('以下邮箱格式无效：\n' + invalidEmails.join('\n'));
+                return;
+            }
+            
+            if (validEmails.length === 0) {
+                if (!confirm('收件人邮箱列表为空，这将禁用邮件通知功能。确定要继续吗？')) {
+                    return;
+                }
+            }
+            
+            // 显示保存中
+            $('#save-btn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>保存中...');
+            
+            // 发送保存请求
+            $.ajax({
+                url: '/api/settings',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    recipient_emails: validEmails,
+                    check_interval_hours: checkInterval
+                }),
+                success: function(response) {
+                    $('#save-btn').prop('disabled', false).html('<i class="fas fa-save me-2"></i>保存设置');
+                    
+                    if (response.success) {
+                        alert('设置保存成功！');
+                        
+                        // 更新显示
+                        $('#recipient-count').text(validEmails.length);
+                        $('#current-interval').text(checkInterval);
+                        
+                        // 更新最后保存时间
+                        const now = new Date();
+                        $('#last-save-time').text(now.toLocaleTimeString('zh-CN'));
+                        
+                        // 询问是否重启监控
+                        if (confirm('设置已保存。是否要重新启动监控以应用新设置？')) {
+                            $.post('/api/stop', function(stopResponse) {
+                                if (stopResponse.success) {
+                                    setTimeout(function() {
+                                        $.post('/api/start', function(startResponse) {
+                                            if (startResponse.success) {
+                                                alert('监控已重新启动，新设置已生效！');
+                                            } else {
+                                                alert('监控启动失败: ' + startResponse.error);
+                                            }
+                                        });
+                                    }, 1000);
+                                } else {
+                                    alert('监控停止失败: ' + stopResponse.error);
+                                }
+                            });
+                        }
+                    } else {
+                        alert('保存失败: ' + response.error);
+                    }
+                },
+                error: function() {
+                    $('#save-btn').prop('disabled', false).html('<i class="fas fa-save me-2"></i>保存设置');
+                    alert('保存失败：网络错误或服务器异常');
+                }
+            });
+        });
+        
+        // 测试邮件发送按钮
+        $('#test-email-btn').click(function() {
+            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>测试中...');
+            
+            // 发送测试邮件
+            $.post('/api/test_email', function(response) {
+                $('#test-email-btn').prop('disabled', false).html('<i class="fas fa-paper-plane me-1"></i>测试邮件发送');
+                
+                if (response.success) {
+                    alert(response.message || '测试邮件发送成功！请检查收件箱。');
+                } else {
+                    alert('测试失败: ' + (response.error || '未知错误'));
+                }
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                $('#test-email-btn').prop('disabled', false).html('<i class="fas fa-paper-plane me-1"></i>测试邮件发送');
+                alert('请求失败: ' + textStatus + ' - ' + errorThrown);
+            });
+        });
+        
+        // 发送测试邮件按钮
+        $('#send-test-email-btn').click(function() {
+            alert('发送测试邮件功能需要专门的API支持，当前使用单次检查代替。\n\n请点击上方的"测试邮件发送"按钮。');
+        });
+        
+        // 自动保存最后保存时间
+        function updateLastSaveTime() {
+            const now = new Date();
+            $('#last-save-time').text(now.toLocaleTimeString('zh-CN'));
+        }
+        
+        // 初始更新时间
+        updateLastSaveTime();
+    });
+</script>
+{% endblock %}

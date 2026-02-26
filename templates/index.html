@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+
+{% block title %}监控状态{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2 class="mb-4">
+            <i class="fas fa-tachometer-alt me-2"></i>监控状态
+            <span class="loading-spinner ms-2">
+                <i class="fas fa-spinner fa-spin"></i>
+            </span>
+        </h2>
+    </div>
+</div>
+
+<!-- 状态卡片 -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-info-circle me-2"></i>系统状态
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h5>监控状态</h5>
+                        <div class="d-flex align-items-center">
+                            {% if status.is_running %}
+                            <span class="status-badge monitor-running me-3">
+                                <i class="fas fa-play-circle me-1"></i>运行中
+                            </span>
+                            {% else %}
+                            <span class="status-badge monitor-stopped me-3">
+                                <i class="fas fa-stop-circle me-1"></i>已停止
+                            </span>
+                            {% endif %}
+                            
+                            <div>
+                                <small class="text-muted">数据库设置: 
+                                    {% if status.monitor_enabled %}
+                                    <span class="text-success">启用</span>
+                                    {% else %}
+                                    <span class="text-danger">禁用</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <h5>检查间隔</h5>
+                        <p class="fs-4">{{ status.check_interval_hours }} 小时</p>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <h5>监控网站</h5>
+                        <p class="fs-4">{{ status.website_count }} 个</p>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <h5>收件人邮箱</h5>
+                        <p>
+                            {% if status.recipient_emails %}
+                                {{ status.recipient_emails|length }} 个
+                            {% else %}
+                                <span class="text-danger">未设置</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <h5>报告统计</h5>
+                        <div class="row">
+                            <div class="col-md-3 text-center">
+                                <div class="p-3 border rounded bg-light">
+                                    <h3 class="text-primary">{{ status.total_reports }}</h3>
+                                    <small class="text-muted">总报告数</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="p-3 border rounded bg-light">
+                                    <h3 class="text-success">{{ status.sent_reports }}</h3>
+                                    <small class="text-muted">已发送</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="p-3 border rounded bg-light">
+                                    <h3 class="text-warning">{{ status.unsent_reports }}</h3>
+                                    <small class="text-muted">未发送</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="p-3 border rounded bg-light">
+                                    <h3 class="text-info">
+                                        {% if status.total_reports > 0 %}
+                                            {{ "%.1f"|format(status.sent_reports / status.total_reports * 100) }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </h3>
+                                    <small class="text-muted">发送率</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <i class="fas fa-play-circle me-2"></i>控制面板
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if status.is_running %}
+                    <button id="stop-btn" class="btn btn-danger btn-action">
+                        <i class="fas fa-stop me-2"></i>停止监控
+                    </button>
+                    {% else %}
+                    <button id="start-btn" class="btn btn-success btn-action">
+                        <i class="fas fa-play me-2"></i>开始监控
+                    </button>
+                    {% endif %}
+                    
+                    <button id="run-once-btn" class="btn btn-primary btn-action">
+                        <i class="fas fa-sync-alt me-2"></i>立即检查
+                    </button>
+                    
+                    <button id="send-unsent-btn" class="btn btn-warning btn-action">
+                        <i class="fas fa-paper-plane me-2"></i>发送未发送报告
+                    </button>
+                    
+                    <button id="refresh-btn" class="btn btn-outline-secondary btn-action">
+                        <i class="fas fa-redo me-2"></i>刷新状态
+                    </button>
+                </div>
+                
+                <div class="mt-4">
+                    <h6>快速链接</h6>
+                    <div class="list-group">
+                        <a href="/reports" class="list-group-item list-group-item-action">
+                            <i class="fas fa-list me-2"></i>查看报告
+                        </a>
+                        <a href="/settings" class="list-group-item list-group-item-action">
+                            <i class="fas fa-cog me-2"></i>邮箱设置
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-bell me-2"></i>最近活动
+            </div>
+            <div class="card-body">
+                <div id="recent-activity">
+                    <p class="text-muted">加载中...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 网站状态表格 -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <i class="fas fa-globe me-2"></i>监控网站列表
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>网站名称</th>
+                                <th>URL</th>
+                                <th>状态</th>
+                                <th>最后检查</th>
+                            </tr>
+                        </thead>
+                        <tbody id="websites-table">
+                            <tr>
+                                <td colspan="4" class="text-center">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 页面加载完成
+    $(document).ready(function() {
+        // 更新最后更新时间
+        function updateLastUpdateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('zh-CN');
+            $('#last-update').text('最后更新: ' + timeString);
+        }
+        
+        // 更新网站列表
+        function updateWebsitesTable() {
+            // 这里可以扩展为从API获取每个网站的详细状态
+            // 目前只显示静态信息
+            const websites = [
+                {name: "CONCITO", url: "https://concito.dk/en/analyser", status: "正常"},
+                {name: "WWF", url: "https://www.worldwildlife.org/news/press-releases/", status: "正常"},
+                {name: "EEB", url: "https://eeb.org/en/library/", status: "正常"},
+                {name: "Green Alliance", url: "https://green-alliance.org.uk", status: "正常"},
+                {name: "Pembina Institute", url: "https://www.pembina.org/all", status: "正常"}
+            ];
+            
+            let html = '';
+            websites.forEach(site => {
+                html += `
+                <tr>
+                    <td><strong>${site.name}</strong></td>
+                    <td><a href="${site.url}" target="_blank">${site.url}</a></td>
+                    <td><span class="badge bg-success">${site.status}</span></td>
+                    <td><span class="text-muted">--:--:--</span></td>
+                </tr>
+                `;
+            });
+            
+            $('#websites-table').html(html);
+        }
+        
+        // 更新最近活动
+        function updateRecentActivity() {
+            $.get('/api/reports?limit=3', function(response) {
+                if (response.success && response.reports.length > 0) {
+                    let html = '';
+                    response.reports.forEach(report => {
+                        const title = report.title.length > 30 ? report.title.substring(0, 30) + '...' : report.title;
+                        const time = report.discovered_time ? report.discovered_time.substring(0, 19) : '未知时间';
+                        html += `
+                        <div class="mb-2">
+                            <div class="small">${time}</div>
+                            <div class="fw-bold">${title}</div>
+                            <div class="small text-muted">来源: ${report.source_website || '未知'}</div>
+                        </div>
+                        <hr class="my-2">
+                        `;
+                    });
+                    
+                    $('#recent-activity').html(html);
+                } else {
+                    $('#recent-activity').html('<p class="text-muted">暂无最近活动</p>');
+                }
+            });
+        }
+        
+        // 初始化
+        updateLastUpdateTime();
+        updateWebsitesTable();
+        updateRecentActivity();
+        
+        // 刷新按钮
+        $('#refresh-btn').click(function() {
+            location.reload();
+        });
+        
+        // 开始监控按钮
+        $('#start-btn').click(function() {
+            if (!confirm('确定要开始监控吗？')) return;
+            
+            $.post('/api/start', function(response) {
+                if (response.success) {
+                    alert(response.message);
+                    location.reload();
+                } else {
+                    alert('启动失败: ' + response.error);
+                }
+            });
+        });
+        
+        // 停止监控按钮
+        $('#stop-btn').click(function() {
+            if (!confirm('确定要停止监控吗？')) return;
+            
+            $.post('/api/stop', function(response) {
+                if (response.success) {
+                    alert(response.message);
+                    location.reload();
+                } else {
+                    alert('停止失败: ' + response.error);
+                }
+            });
+        });
+        
+        // 立即检查按钮
+        $('#run-once-btn').click(function() {
+            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>检查中...');
+            
+            $.post('/api/run_once', function(response) {
+                $('#run-once-btn').prop('disabled', false).html('<i class="fas fa-sync-alt me-2"></i>立即检查');
+                
+                if (response.success) {
+                    let message = response.message;
+                    if (response.results && Object.keys(response.results).length > 0) {
+                        message += '\n\n检查结果:\n';
+                        for (const [site, count] of Object.entries(response.results)) {
+                            message += `${site}: ${count} 个新报告\n`;
+                        }
+                    }
+                    alert(message);
+                    location.reload();
+                } else {
+                    alert('检查失败: ' + response.error);
+                }
+            });
+        });
+        
+        // 发送未发送报告按钮
+        $('#send-unsent-btn').click(function() {
+            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>发送中...');
+            
+            $.post('/api/send_unsent', function(response) {
+                $('#send-unsent-btn').prop('disabled', false).html('<i class="fas fa-paper-plane me-2"></i>发送未发送报告');
+                
+                if (response.success) {
+                    alert(response.message);
+                    location.reload();
+                } else {
+                    alert('发送失败: ' + response.error);
+                }
+            });
+        });
+        
+        // 自动刷新状态（每30秒）
+        setInterval(function() {
+            $.get('/api/status', function(response) {
+                if (response.success) {
+                    const status = response.status;
+                    
+                    // 更新状态显示
+                    if (status.is_running) {
+                        $('.status-badge').removeClass('monitor-stopped').addClass('monitor-running')
+                            .html('<i class="fas fa-play-circle me-1"></i>运行中');
+                    } else {
+                        $('.status-badge').removeClass('monitor-running').addClass('monitor-stopped')
+                            .html('<i class="fas fa-stop-circle me-1"></i>已停止');
+                    }
+                    
+                    // 更新统计数字
+                    $('#website-count').text(status.website_count);
+                    
+                    // 更新最后更新时间
+                    updateLastUpdateTime();
+                    
+                    // 更新最近活动
+                    updateRecentActivity();
+                }
+            });
+        }, 30000);
+    });
+</script>
+{% endblock %}

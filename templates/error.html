@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}错误{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <i class="fas fa-exclamation-triangle me-2"></i>错误
+            </div>
+            <div class="card-body text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-bug fa-4x text-danger mb-3"></i>
+                    <h3 class="text-danger">系统出错</h3>
+                </div>
+                
+                <div class="alert alert-light mb-4">
+                    <p class="mb-0">{{ error }}</p>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                    <a href="/" class="btn btn-primary">
+                        <i class="fas fa-home me-2"></i>返回首页
+                    </a>
+                    <a href="/reports" class="btn btn-outline-secondary ms-2">
+                        <i class="fas fa-list me-2"></i>查看报告
+                    </a>
+                    <button onclick="history.back()" class="btn btn-outline-dark ms-2">
+                        <i class="fas fa-arrow-left me-2"></i>返回上一页
+                    </button>
+                </div>
+                
+                <div class="mt-4 small text-muted">
+                    <p>如果问题持续存在，请检查：</p>
+                    <ul class="text-start">
+                        <li>数据库文件是否可访问</li>
+                        <li>监控服务是否正常运行</li>
+                        <li>网络连接是否正常</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
