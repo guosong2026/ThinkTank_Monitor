@@ -315,11 +315,21 @@ class EmailSender:
         except socket.timeout as e:
             error_msg = f"SMTP连接超时: {str(e)}。可能原因: 网络慢、防火墙阻止、服务器无响应。"
             logger.error(error_msg)
-            return False, error_msg
+            return False
         except ConnectionRefusedError as e:
             error_msg = f"连接被拒绝: {str(e)}。可能原因: 端口错误、SMTP服务器未运行、防火墙阻止。"
             logger.error(error_msg)
-            return False, error_msg
+            return False
+        except socket.error as e:
+            # 处理socket层面错误，包括"Network is unreachable"
+            error_msg = f"网络连接错误: {str(e)}。可能原因: 网络不可达、DNS解析失败、防火墙阻止、PythonAnywhere端口限制。"
+            logger.error(error_msg)
+            return False
+        except OSError as e:
+            # 处理操作系统层面错误
+            error_msg = f"操作系统错误: {str(e)}。可能原因: 网络配置问题、权限问题、资源限制。"
+            logger.error(error_msg)
+            return False
         except Exception as e:
             logger.error(f"发送邮件失败: {e}")
             return False
@@ -431,6 +441,16 @@ class EmailSender:
             return False, error_msg
         except ConnectionRefusedError as e:
             error_msg = f"连接被拒绝: {str(e)}。可能原因: 端口错误、SMTP服务器未运行、防火墙阻止。"
+            logger.error(error_msg)
+            return False, error_msg
+        except socket.error as e:
+            # 处理socket层面错误，包括"Network is unreachable"
+            error_msg = f"网络连接错误: {str(e)}。可能原因: 网络不可达、DNS解析失败、防火墙阻止、PythonAnywhere端口限制。"
+            logger.error(error_msg)
+            return False, error_msg
+        except OSError as e:
+            # 处理操作系统层面错误
+            error_msg = f"操作系统错误: {str(e)}。可能原因: 网络配置问题、权限问题、资源限制。"
             logger.error(error_msg)
             return False, error_msg
         except Exception as e:
