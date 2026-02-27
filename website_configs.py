@@ -226,6 +226,57 @@ def wwf_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
                     'source': 'WWF'
                 })
     
+    # 清理标题
+    for report in reports:
+        title = report['title']
+        
+        # 移除日期模式（如 "February 26, 2026"）
+        import re
+        date_patterns = [
+            r'January \d{1,2}, 20\d{2}',
+            r'February \d{1,2}, 20\d{2}',
+            r'March \d{1,2}, 20\d{2}',
+            r'April \d{1,2}, 20\d{2}',
+            r'May \d{1,2}, 20\d{2}',
+            r'June \d{1,2}, 20\d{2}',
+            r'July \d{1,2}, 20\d{2}',
+            r'August \d{1,2}, 20\d{2}',
+            r'September \d{1,2}, 20\d{2}',
+            r'October \d{1,2}, 20\d{2}',
+            r'November \d{1,2}, 20\d{2}',
+            r'December \d{1,2}, 20\d{2}'
+        ]
+        
+        for pattern in date_patterns:
+            title = re.sub(pattern, '', title, flags=re.IGNORECASE).strip()
+        
+        # 移除常见类型标识
+        type_indicators = [
+            'Media Release',
+            'Article', 
+            'Publication',
+            'Report',
+            'Blog',
+            'Analysis',
+            'Press Release'
+        ]
+        
+        for indicator in type_indicators:
+            title = title.replace(indicator, '').strip()
+        
+        # 移除多余空白
+        title = ' '.join(title.split())
+        
+        # 如果标题以标点或小写字母开头，可能是截断的，尝试修复
+        if title and len(title) > 0:
+            # 移除开头的标点
+            while title and title[0] in '.,;:!?':
+                title = title[1:].strip()
+            
+            # 如果标题仍然有意义，更新
+            if len(title) > 10:
+                report['title'] = title
+    
     # 去重
     unique_reports = []
     seen_urls = set()
@@ -490,13 +541,16 @@ def pembina_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     reports = []
     soup = BeautifulSoup(html_content, 'lxml')
     
-    # Pembina特定选择器
+    # Pembina特定选择器（针对新网站结构优化）
+    # 优先使用更具体的选择器
     selectors = [
+        'h3.text-2xl.mb-2 a',           # 文章标题链接
+        '.card h3 a',                   # 卡片中的标题
+        '.card a',                      # 卡片中的任何链接
         'article a',
         '.publication a',
         '.report a',
         '.resource a',
-        '.card a',
         '.item a',
         'h3 a',
         'h2 a',
@@ -509,17 +563,31 @@ def pembina_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
         links = soup.select(selector)
         if links:
             for link in links:
-                title = link.text.strip()
                 href = link.get('href', '')
+                if not href:
+                    continue
+                    
+                # 提取并清理标题
+                title = link.text.strip()
+                # 移除多余空白和换行
+                title = ' '.join(title.split())
                 
-                if href and title:
+                # 检查是否是文章链接
+                href_lower = href.lower()
+                is_article_link = any(pattern in href_lower for pattern in 
+                                     ['/media-release/', '/blog/', '/pub/', 
+                                      '/publication/', '/report/', '/article/'])
+                
+                # 如果链接看起来是文章且标题有一定长度
+                if is_article_link and title and len(title) > 10:
                     full_url = urljoin(base_url, href)
                     reports.append({
                         'title': title,
                         'url': full_url,
                         'source': 'Pembina Institute'
                     })
-            break
+            # 如果有找到报告，继续尝试其他选择器以获取更多
+            # 不立即break，因为可能还有其他选择器能找到不同链接
     
     # 如果上述选择器都没找到，查找包含特定路径的链接
     if not reports:
