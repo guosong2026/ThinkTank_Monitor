@@ -5,6 +5,7 @@
 """
 
 import json
+import time
 import logging
 import os
 import threading
@@ -92,12 +93,12 @@ class MonitorService:
             parsed_settings["recipient_emails"] = []
         
         # 检查间隔
-        check_interval_str = settings.get("check_interval_hours", "1")
+        check_interval_str = settings.get("check_interval_hours", "2")
         try:
             parsed_settings["check_interval_hours"] = float(check_interval_str)
         except ValueError:
-            logger.warning(f"无效的检查间隔: {check_interval_str}，使用默认值1小时")
-            parsed_settings["check_interval_hours"] = 1.0
+            logger.warning(f"无效的检查间隔: {check_interval_str}，使用默认值2小时")
+            parsed_settings["check_interval_hours"] = 2.0
         
         logger.debug(f"加载设置: {parsed_settings}")
         return parsed_settings
@@ -132,7 +133,7 @@ class MonitorService:
             monitor = MultiWebsiteMonitor(
                 website_configs=website_configs,
                 db_path=self.db_path,
-                check_interval_hours=settings.get("check_interval_hours", 1),
+                check_interval_hours=settings.get("check_interval_hours", 2),
                 enable_email=enable_email,
                 smtp_server=smtp_server,
                 smtp_port=smtp_port,
@@ -163,15 +164,46 @@ class MonitorService:
                 logger.error("无法创建监控器，检查失败")
                 return {}
         
+        start_time = datetime.now()
+        start_timestamp = time.perf_counter()
+        results = {}
+        new_reports_count = 0
+        status = 'success'
+        error_message = None
+        
         try:
             logger.info("开始单次监控检查")
             results = self.monitor.run_once()
+            new_reports_count = sum(results.values())
             logger.info(f"单次监控检查完成: {results}")
-            return results
             
         except Exception as e:
             logger.error(f"单次监控检查失败: {e}")
-            return {}
+            status = 'error'
+            error_message = str(e)
+            results = {}
+        
+        end_timestamp = time.perf_counter()
+        end_time = datetime.now()
+        duration_seconds = end_timestamp - start_timestamp
+        
+        # 插入监控运行记录到数据库
+        try:
+            with DatabaseManager(self.db_path) as db:
+                db.insert_monitor_run(
+                    start_time=start_time,
+                    end_time=end_time,
+                    duration_seconds=duration_seconds,
+                    new_reports_count=new_reports_count,
+                    results_json=json.dumps(results) if results else None,
+                    status=status,
+                    error_message=error_message
+                )
+                logger.debug(f"监控运行记录已保存，耗时: {duration_seconds:.2f}秒")
+        except Exception as e:
+            logger.error(f"保存监控运行记录失败: {e}")
+        
+        return results
     
     def send_test_email(self) -> Dict[str, Any]:
         """
@@ -262,7 +294,7 @@ class MonitorService:
             try:
                 # 获取检查间隔
                 settings = self._load_settings()
-                check_interval_hours = settings.get("check_interval_hours", 1)
+                check_interval_hours = settings.get("check_interval_hours", 2)
                 check_interval_seconds = int(check_interval_hours * 3600)
                 
                 # 添加调度任务
@@ -342,7 +374,7 @@ class MonitorService:
             status = {
                 "is_running": self.is_running,
                 "monitor_enabled": settings.get("monitor_enabled", False),
-                "check_interval_hours": settings.get("check_interval_hours", 1),
+                "check_interval_hours": settings.get("check_interval_hours", 2),
                 "recipient_emails": settings.get("recipient_emails", []),
                 "website_count": len(get_all_websites()) if hasattr(get_all_websites, '__call__') else 0,
             }
@@ -399,6 +431,22 @@ class MonitorService:
                 
         except Exception as e:
             logger.error(f"获取最近报告失败: {e}")
+            return []
+    def get_recent_monitor_runs(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        获取最近的监控运行记录
+        
+        Args:
+            limit: 返回记录数量限制
+        
+        Returns:
+            List[Dict[str, Any]]: 监控运行记录列表
+        """
+        try:
+            with DatabaseManager(self.db_path) as db:
+                return db.get_recent_monitor_runs(limit=limit)
+        except Exception as e:
+            logger.error(f"获取监控运行记录失败: {e}")
             return []
     
     def update_settings(self, recipient_emails: List[str] = None, 
@@ -458,7 +506,7 @@ class MonitorService:
             try:
                 # 获取当前检查间隔
                 settings = self._load_settings()
-                check_interval_hours = settings.get("check_interval_hours", 1)
+                check_interval_hours = settings.get("check_interval_hours", 2)
                 check_interval_seconds = int(check_interval_hours * 3600)
                 
                 # 移除旧任务

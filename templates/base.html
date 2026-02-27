@@ -100,6 +100,11 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'monitor_runs_page' %}active{% endif %}" href="/monitor_runs">
+                                <i class="fas fa-history me-1"></i>监控运行
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'settings_page' %}active{% endif %}" href="/settings">
                                 <i class="fas fa-cog me-1"></i>邮箱设置
                             </a>

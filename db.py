@@ -6,7 +6,7 @@
 import sqlite3
 import logging
 from datetime import datetime
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +71,19 @@ class DatabaseManager:
         )
         """
         
+        create_monitor_runs_table_sql = """
+        CREATE TABLE IF NOT EXISTS monitor_runs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            start_time TIMESTAMP NOT NULL,
+            end_time TIMESTAMP,
+            duration_seconds REAL,
+            new_reports_count INTEGER DEFAULT 0,
+            results_json TEXT,
+            status TEXT DEFAULT 'success',
+            error_message TEXT
+        )
+        """
+        
         try:
             cursor = self.connection.cursor()
             
@@ -81,6 +94,10 @@ class DatabaseManager:
             # 创建设置表
             cursor.execute(create_settings_table_sql)
             logger.info("设置表创建成功或已存在")
+            
+            # 创建监控运行表
+            cursor.execute(create_monitor_runs_table_sql)
+            logger.info("监控运行表创建成功或已存在")
             
             self.connection.commit()
             
@@ -303,7 +320,7 @@ class DatabaseManager:
         default_settings = {
             "monitor_enabled": "0",  # 默认禁用
             "recipient_emails": "[]",  # 空列表
-            "check_interval_hours": "1",  # 默认1小时
+            "check_interval_hours": "2",  # 默认2小时
         }
         
         try:
@@ -401,6 +418,85 @@ class DatabaseManager:
         except sqlite3.Error as e:
             logger.error(f"获取所有设置失败: {e}")
             return {}
+    def insert_monitor_run(self, start_time, end_time, duration_seconds, 
+                          new_reports_count=0, results_json=None, 
+                          status='success', error_message=None) -> Optional[int]:
+        """
+        插入监控运行记录
+        
+        Args:
+            start_time: 开始时间 (datetime)
+            end_time: 结束时间 (datetime)
+            duration_seconds: 耗时秒数 (float)
+            new_reports_count: 新报告数量 (int)
+            results_json: 结果JSON字符串 (str, optional)
+            status: 状态 ('success', 'error') (str)
+            error_message: 错误信息 (str, optional)
+        
+        Returns:
+            Optional[int]: 插入成功的运行ID，失败时返回None
+        """
+        insert_sql = """
+        INSERT INTO monitor_runs 
+        (start_time, end_time, duration_seconds, new_reports_count, 
+         results_json, status, error_message)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """
+        
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(insert_sql, (
+                start_time.isoformat() if hasattr(start_time, 'isoformat') else start_time,
+                end_time.isoformat() if hasattr(end_time, 'isoformat') else end_time,
+                duration_seconds,
+                new_reports_count,
+                results_json,
+                status,
+                error_message
+            ))
+            self.connection.commit()
+            return cursor.lastrowid
+        except sqlite3.Error as e:
+            logger.error(f"插入监控运行记录失败: {e}")
+            return None
+    
+    def get_recent_monitor_runs(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        获取最近的监控运行记录
+        
+        Args:
+            limit: 返回记录数量限制
+        
+        Returns:
+            List[Dict[str, Any]]: 监控运行记录列表
+        """
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("""
+                SELECT id, start_time, end_time, duration_seconds, 
+                       new_reports_count, results_json, status, error_message
+                FROM monitor_runs 
+                ORDER BY start_time DESC 
+                LIMIT ?
+            """, (limit,))
+            rows = cursor.fetchall()
+            
+            runs = []
+            for row in rows:
+                runs.append({
+                    'id': row['id'],
+                    'start_time': row['start_time'],
+                    'end_time': row['end_time'],
+                    'duration_seconds': row['duration_seconds'],
+                    'new_reports_count': row['new_reports_count'],
+                    'results_json': row['results_json'],
+                    'status': row['status'],
+                    'error_message': row['error_message']
+                })
+            return runs
+        except sqlite3.Error as e:
+            logger.error(f"获取监控运行记录失败: {e}")
+            return []
     
     def __enter__(self):
         """上下文管理器入口"""

@@ -30,7 +30,7 @@ class WebsiteMonitor:
     """网站监控器类"""
     
     def __init__(self, target_url: str, db_path: str = "reports.db", 
-                 check_interval_hours: int = 1,
+                 check_interval_hours: int = 2,
                  enable_email: bool = True,
                  smtp_server: str = None, smtp_port: int = None,
                  sender_email: str = None, sender_password: str = None,
@@ -339,7 +339,7 @@ class MultiWebsiteMonitor:
     """多网站监控器类"""
     
     def __init__(self, website_configs: List[WebsiteConfig], db_path: str = "reports.db",
-                 check_interval_hours: int = 1,
+                 check_interval_hours: int = 2,
                  enable_email: bool = True,
                  smtp_server: str = None, smtp_port: int = None,
                  sender_email: str = None, sender_password: str = None,
@@ -700,8 +700,8 @@ def main():
                        help='要监控的网站URL (默认: https://concito.dk/en/analyser)')
     parser.add_argument('--db', default='reports.db',
                        help='SQLite数据库文件路径 (默认: reports.db)')
-    parser.add_argument('--interval', type=int, default=1,
-                       help='检查间隔（小时） (默认: 1)')
+    parser.add_argument('--interval', type=int, default=2,
+                       help='检查间隔（小时） (默认: 2)')
     parser.add_argument('--runs', type=int, default=None,
                        help='最大运行次数（默认: 无限运行）')
     parser.add_argument('--once', action='store_true',

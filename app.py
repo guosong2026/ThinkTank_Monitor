@@ -151,7 +151,7 @@ def api_get_settings():
         # 提取设置相关字段
         settings = {
             'recipient_emails': status.get('recipient_emails', []),
-            'check_interval_hours': status.get('check_interval_hours', 1)
+            'check_interval_hours': status.get('check_interval_hours', 2)
         }
         
         return jsonify({
@@ -304,6 +304,56 @@ def internal_server_error(e):
     logger.error(f"服务器内部错误: {e}")
     return render_template('error.html', error='服务器内部错误'), 500
 
+
+@app.route('/api/monitor_runs', methods=['GET'])
+def api_get_monitor_runs():
+    """获取监控运行记录API"""
+    try:
+        limit = request.args.get('limit', 10, type=int)
+        if limit < 1 or limit > 50:
+            limit = 10
+        
+        runs = monitor_service.get_recent_monitor_runs(limit=limit)
+        
+        # 计算统计信息
+        if runs:
+            total_runs = len(runs)
+            success_runs = sum(1 for r in runs if r.get('status') == 'success')
+            avg_duration = sum(r.get('duration_seconds', 0) for r in runs) / total_runs
+            total_new_reports = sum(r.get('new_reports_count', 0) for r in runs)
+        else:
+            total_runs = 0
+            success_runs = 0
+            avg_duration = 0
+            total_new_reports = 0
+        
+        return jsonify({
+            'success': True,
+            'runs': runs,
+            'stats': {
+                'total_runs': total_runs,
+                'success_runs': success_runs,
+                'success_rate': success_runs / total_runs if total_runs > 0 else 0,
+                'avg_duration_seconds': round(avg_duration, 2),
+                'total_new_reports': total_new_reports
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取监控运行记录API失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/monitor_runs', methods=['GET'])
+def monitor_runs_page():
+    """监控运行记录页面"""
+    try:
+        runs = monitor_service.get_recent_monitor_runs(limit=10)
+        return render_template('monitor_runs.html', runs=runs)
+    except Exception as e:
+        logger.error(f"监控运行记录页面加载失败: {e}")
+        return render_template('error.html', error=str(e)), 500
 
 @app.route('/trigger-check', methods=['GET'])
 def trigger_check():
