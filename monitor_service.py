@@ -223,11 +223,22 @@ class MonitorService:
                     'error': '收件人邮箱列表为空，请先在设置中配置收件人邮箱。'
                 }
             
-            # 从环境变量读取SMTP配置
+            # 读取SMTP配置 - 使用EmailSender类属性，它已处理.env文件加载
+            # 记录当前配置状态以帮助调试
+            logger.info(f"调试信息: os.environ SMTP_SERVER={os.environ.get('SMTP_SERVER', '未设置')}")
+            logger.info(f"调试信息: EmailSender.SMTP_SERVER={EmailSender.SMTP_SERVER}")
+            logger.info(f"调试信息: EmailSender.SMTP_PORT={EmailSender.SMTP_PORT}")
+            logger.info(f"调试信息: EmailSender.SENDER_EMAIL={EmailSender.SENDER_EMAIL}")
+            
+            # 优先使用环境变量，如果没有则使用EmailSender类属性
             smtp_server = os.environ.get("SMTP_SERVER", EmailSender.SMTP_SERVER)
             smtp_port_str = os.environ.get("SMTP_PORT", str(EmailSender.SMTP_PORT))
             sender_email = os.environ.get("SENDER_EMAIL", EmailSender.SENDER_EMAIL)
             sender_password = os.environ.get("SENDER_PASSWORD", EmailSender.SENDER_PASSWORD)
+            
+            # 如果密码为空，尝试从EmailSender.SENDER_PASSWORD获取
+            if not sender_password and EmailSender.SENDER_PASSWORD:
+                sender_password = EmailSender.SENDER_PASSWORD
             
             # 转换端口为整数
             try:
@@ -250,10 +261,12 @@ class MonitorService:
             
             # 测试SMTP连接
             logger.info("测试SMTP连接...")
-            if not email_sender.test_connection():
+            connection_success, connection_error = email_sender.test_connection()
+            if not connection_success:
+                logger.error(f"SMTP连接测试失败: {connection_error}")
                 return {
                     'success': False,
-                    'error': 'SMTP连接测试失败，请检查发件人邮箱配置。'
+                    'error': f'SMTP连接测试失败: {connection_error}'
                 }
             
             # 发送测试邮件

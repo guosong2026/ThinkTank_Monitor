@@ -313,13 +313,13 @@ class EmailSender:
             logger.error(f"SMTP错误: {e}")
             return False
         except socket.timeout as e:
-            logger.error(f"SMTP连接超时: {e}")
-            logger.error(f"可能原因: 网络慢、防火墙阻止、服务器无响应")
-            return False
+            error_msg = f"SMTP连接超时: {str(e)}。可能原因: 网络慢、防火墙阻止、服务器无响应。"
+            logger.error(error_msg)
+            return False, error_msg
         except ConnectionRefusedError as e:
-            logger.error(f"连接被拒绝: {e}")
-            logger.error(f"可能原因: 端口错误、SMTP服务器未运行、防火墙阻止")
-            return False
+            error_msg = f"连接被拒绝: {str(e)}。可能原因: 端口错误、SMTP服务器未运行、防火墙阻止。"
+            logger.error(error_msg)
+            return False, error_msg
         except Exception as e:
             logger.error(f"发送邮件失败: {e}")
             return False
@@ -375,23 +375,23 @@ class EmailSender:
         from datetime import datetime
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    def test_connection(self) -> bool:
+    def test_connection(self) -> tuple[bool, str]:
         """
         测试SMTP连接
         
         Returns:
-            bool: 连接是否成功
+            tuple[bool, str]: (连接是否成功, 错误信息或空字符串)
         """
         # 检查必要的配置
         if not self.sender_email or not self.sender_password:
-            logger.error("无法测试SMTP连接：发件人邮箱或SMTP授权码未设置")
-            logger.error("请通过环境变量 SENDER_EMAIL 和 SENDER_PASSWORD 设置发件人信息")
-            return False
+            error_msg = "无法测试SMTP连接：发件人邮箱或SMTP授权码未设置。请通过环境变量 SENDER_EMAIL 和 SENDER_PASSWORD 设置发件人信息。"
+            logger.error(error_msg)
+            return False, error_msg
         
         if not self.smtp_server:
-            logger.error("无法测试SMTP连接：SMTP服务器地址未设置")
-            logger.error("请通过环境变量 SMTP_SERVER 设置SMTP服务器地址")
-            return False
+            error_msg = "无法测试SMTP连接：SMTP服务器地址未设置。请通过环境变量 SMTP_SERVER 设置SMTP服务器地址。"
+            logger.error(error_msg)
+            return False, error_msg
         
         try:
             context = ssl.create_default_context()
@@ -415,28 +415,28 @@ class EmailSender:
                     server.login(self.sender_email, self.sender_password)
                 
             logger.info("SMTP连接测试成功")
-            return True
+            return True, ""
             
         except smtplib.SMTPAuthenticationError as e:
-            logger.error(f"SMTP认证测试失败: {e}")
-            logger.error(f"请检查邮箱 {self.sender_email} 和授权码是否正确")
-            return False
+            error_msg = f"SMTP认证测试失败: {str(e)}。请检查邮箱 {self.sender_email} 和授权码是否正确。"
+            logger.error(error_msg)
+            return False, error_msg
         except smtplib.SMTPServerDisconnected as e:
-            logger.error(f"SMTP服务器断开连接: {e}")
-            logger.error(f"可能原因: 服务器主动断开、TLS协商失败、端口错误")
-            return False
+            error_msg = f"SMTP服务器断开连接: {str(e)}。可能原因: 服务器主动断开、TLS协商失败、端口错误。"
+            logger.error(error_msg)
+            return False, error_msg
         except socket.timeout as e:
-            logger.error(f"SMTP连接超时: {e}")
-            logger.error(f"可能原因: 网络慢、防火墙阻止、服务器无响应")
-            return False
+            error_msg = f"SMTP连接超时: {str(e)}。可能原因: 网络慢、防火墙阻止、服务器无响应。"
+            logger.error(error_msg)
+            return False, error_msg
         except ConnectionRefusedError as e:
-            logger.error(f"连接被拒绝: {e}")
-            logger.error(f"可能原因: 端口错误、SMTP服务器未运行、防火墙阻止")
-            return False
+            error_msg = f"连接被拒绝: {str(e)}。可能原因: 端口错误、SMTP服务器未运行、防火墙阻止。"
+            logger.error(error_msg)
+            return False, error_msg
         except Exception as e:
-            logger.error(f"SMTP连接测试失败: {e}")
-            logger.error(f"请检查SMTP配置: {self.smtp_server}:{self.smtp_port}")
-            return False
+            error_msg = f"SMTP连接测试失败: {str(e)}。请检查SMTP配置: {self.smtp_server}:{self.smtp_port}。"
+            logger.error(error_msg)
+            return False, error_msg
 
 
 def get_smtp_config_instructions():
