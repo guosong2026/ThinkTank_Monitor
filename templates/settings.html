@@ -216,11 +216,24 @@
     $(document).ready(function() {
         // 加载发件人配置
         function loadSenderConfig() {
-            // 这里可以扩展为从API获取发件人配置
-            // 目前显示静态信息（来自email_sender.py的默认值）
-            $('#sender-email').text('your_email@outlook.com');
-            $('#smtp-server').text('smtp.office365.com');
-            $('#smtp-port').text('587');
+            // 从API获取发件人配置
+            $.get('/api/smtp_config', function(response) {
+                if (response.success) {
+                    $('#sender-email').text(response.sender_email || '未配置');
+                    $('#smtp-server').text(response.smtp_server || '未配置');
+                    $('#smtp-port').text(response.smtp_port || '未配置');
+                } else {
+                    $('#sender-email').text('加载失败');
+                    $('#smtp-server').text('加载失败');
+                    $('#smtp-port').text('加载失败');
+                    console.error('加载SMTP配置失败:', response.error);
+                }
+            }).fail(function() {
+                $('#sender-email').text('请求失败');
+                $('#smtp-server').text('请求失败');
+                $('#smtp-port').text('请求失败');
+                console.error('请求SMTP配置API失败');
+            });
         }
         
         // 初始化

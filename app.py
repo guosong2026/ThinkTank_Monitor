@@ -355,6 +355,19 @@ def monitor_runs_page():
         logger.error(f"监控运行记录页面加载失败: {e}")
         return render_template('error.html', error=str(e)), 500
 
+@app.route('/api/smtp_config', methods=['GET'])
+def api_get_smtp_config():
+    """获取SMTP配置API"""
+    try:
+        config = monitor_service.get_smtp_config()
+        return jsonify(config)
+    except Exception as e:
+        logger.error(f"获取SMTP配置API失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/trigger-check', methods=['GET'])
 def trigger_check():
     """触发监控检查接口（用于外部cron调用）"""

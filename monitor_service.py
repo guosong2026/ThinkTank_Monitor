@@ -223,12 +223,28 @@ class MonitorService:
                     'error': '收件人邮箱列表为空，请先在设置中配置收件人邮箱。'
                 }
             
+            # 从环境变量读取SMTP配置
+            smtp_server = os.environ.get("SMTP_SERVER", EmailSender.SMTP_SERVER)
+            smtp_port_str = os.environ.get("SMTP_PORT", str(EmailSender.SMTP_PORT))
+            sender_email = os.environ.get("SENDER_EMAIL", EmailSender.SENDER_EMAIL)
+            sender_password = os.environ.get("SENDER_PASSWORD", EmailSender.SENDER_PASSWORD)
+            
+            # 转换端口为整数
+            try:
+                smtp_port = int(smtp_port_str)
+            except ValueError:
+                logger.warning(f"SMTP端口格式无效: {smtp_port_str}，使用默认值{EmailSender.SMTP_PORT}")
+                smtp_port = EmailSender.SMTP_PORT
+            
+            # 记录使用的SMTP配置（不包含密码）
+            logger.info(f"使用SMTP配置: 服务器={smtp_server}, 端口={smtp_port}, 发件人={sender_email}")
+            
             # 创建邮件发送器实例
             email_sender = EmailSender(
-                smtp_server=EmailSender.SMTP_SERVER,
-                smtp_port=EmailSender.SMTP_PORT,
-                sender_email=EmailSender.SENDER_EMAIL,
-                sender_password=EmailSender.SENDER_PASSWORD,
+                smtp_server=smtp_server,
+                smtp_port=smtp_port,
+                sender_email=sender_email,
+                sender_password=sender_password,
                 recipient_emails=recipient_emails
             )
             
@@ -265,6 +281,40 @@ class MonitorService:
             return {
                 'success': False,
                 'error': f'发送测试邮件时发生错误: {str(e)}'
+            }
+    
+    def get_smtp_config(self) -> Dict[str, Any]:
+        """
+        获取当前SMTP配置
+        
+        Returns:
+            Dict[str, Any]: SMTP配置信息
+        """
+        try:
+            # 从环境变量读取SMTP配置
+            smtp_server = os.environ.get("SMTP_SERVER", EmailSender.SMTP_SERVER)
+            smtp_port_str = os.environ.get("SMTP_PORT", str(EmailSender.SMTP_PORT))
+            sender_email = os.environ.get("SENDER_EMAIL", EmailSender.SENDER_EMAIL)
+            
+            # 转换端口为整数
+            try:
+                smtp_port = int(smtp_port_str)
+            except ValueError:
+                smtp_port = EmailSender.SMTP_PORT
+            
+            # 返回配置信息（不包含密码）
+            return {
+                'success': True,
+                'smtp_server': smtp_server,
+                'smtp_port': smtp_port,
+                'sender_email': sender_email,
+                'is_configured': bool(sender_email and sender_email != 'your_email@outlook.com')
+            }
+        except Exception as e:
+            logger.error(f"获取SMTP配置失败: {e}")
+            return {
+                'success': False,
+                'error': str(e)
             }
     
     def start_monitoring(self) -> bool:
