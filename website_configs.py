@@ -534,6 +534,7 @@ def pembina_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
         List[Dict[str, str]]: 报告列表
     """
     from bs4 import BeautifulSoup
+    import re
     
     if not html_content:
         return []
@@ -541,55 +542,119 @@ def pembina_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     reports = []
     soup = BeautifulSoup(html_content, 'lxml')
     
-    # Pembina特定选择器（针对新网站结构优化）
-    # 优先使用更具体的选择器
-    selectors = [
-        'h3.text-2xl.mb-2 a',           # 文章标题链接
-        '.card h3 a',                   # 卡片中的标题
-        '.card a',                      # 卡片中的任何链接
-        'article a',
-        '.publication a',
-        '.report a',
-        '.resource a',
-        '.item a',
-        'h3 a',
-        'h2 a',
-        '.title a',
-        '.field-name-title a',
-        '.node-title a'
-    ]
+    # 方法1：直接查找卡片中的文章链接（针对新网站结构优化）
+    cards = soup.select('.card')
     
-    for selector in selectors:
-        links = soup.select(selector)
-        if links:
-            for link in links:
-                href = link.get('href', '')
-                if not href:
-                    continue
+    for card in cards:
+        # 在卡片中查找所有链接
+        links = card.find_all('a', href=True)
+        
+        for link in links:
+            href = link.get('href', '')
+            if not href:
+                continue
+            
+            # 检查是否是文章链接
+            href_lower = href.lower()
+            is_article_link = any(pattern in href_lower for pattern in 
+                                 ['/media-release/', '/blog/', '/pub/', 
+                                  '/publication/', '/report/', '/article/',
+                                  '/op-ed/'])  # 添加op-ed模式
+            
+            if not is_article_link:
+                continue
+            
+            # 提取并清理标题
+            title = link.text.strip()
+            title = ' '.join(title.split())
+            
+            # 如果标题太短或为空，可能是图标链接，跳过
+            if not title or len(title) < 10:
+                continue
+            
+            # 检查标题是否包含日期模式（进一步确认是文章链接）
+            # 文章标题通常包含日期，如 "February 27, 2026"
+            date_patterns = [
+                r'January \d{1,2}, 20\d{2}',
+                r'February \d{1,2}, 20\d{2}',
+                r'March \d{1,2}, 20\d{2}',
+                r'April \d{1,2}, 20\d{2}',
+                r'May \d{1,2}, 20\d{2}',
+                r'June \d{1,2}, 20\d{2}',
+                r'July \d{1,2}, 20\d{2}',
+                r'August \d{1,2}, 20\d{2}',
+                r'September \d{1,2}, 20\d{2}',
+                r'October \d{1,2}, 20\d{2}',
+                r'November \d{1,2}, 20\d{2}',
+                r'December \d{1,2}, 20\d{2}'
+            ]
+            
+            has_date = any(re.search(pattern, title, re.IGNORECASE) for pattern in date_patterns)
+            
+            # 也检查是否包含文章类型（Media Release, Article, Op-ed等）
+            type_indicators = ['Media Release', 'Article', 'Op-ed', 'Publication', 'Report', 'Blog']
+            has_type = any(indicator in title for indicator in type_indicators)
+            
+            # 如果标题包含日期或类型，或者长度足够，则认为是文章
+            if has_date or has_type or len(title) > 20:
+                full_url = urljoin(base_url, href)
+                reports.append({
+                    'title': title,
+                    'url': full_url,
+                    'source': 'Pembina Institute'
+                })
+                # 找到一个有效链接后，跳出内层循环，处理下一个卡片
+                break
+    
+    # 方法2：如果方法1没找到，回退到原始选择器逻辑
+    if not reports:
+        # Pembina特定选择器（针对新网站结构优化）
+        # 优先使用更具体的选择器
+        selectors = [
+            'h3.text-2xl.mb-2 a',           # 文章标题链接
+            '.card h3 a',                   # 卡片中的标题
+            '.card a',                      # 卡片中的任何链接
+            'article a',
+            '.publication a',
+            '.report a',
+            '.resource a',
+            '.item a',
+            'h3 a',
+            'h2 a',
+            '.title a',
+            '.field-name-title a',
+            '.node-title a'
+        ]
+        
+        for selector in selectors:
+            links = soup.select(selector)
+            if links:
+                for link in links:
+                    href = link.get('href', '')
+                    if not href:
+                        continue
+                        
+                    # 提取并清理标题
+                    title = link.text.strip()
+                    title = ' '.join(title.split())
                     
-                # 提取并清理标题
-                title = link.text.strip()
-                # 移除多余空白和换行
-                title = ' '.join(title.split())
-                
-                # 检查是否是文章链接
-                href_lower = href.lower()
-                is_article_link = any(pattern in href_lower for pattern in 
-                                     ['/media-release/', '/blog/', '/pub/', 
-                                      '/publication/', '/report/', '/article/'])
-                
-                # 如果链接看起来是文章且标题有一定长度
-                if is_article_link and title and len(title) > 10:
-                    full_url = urljoin(base_url, href)
-                    reports.append({
-                        'title': title,
-                        'url': full_url,
-                        'source': 'Pembina Institute'
-                    })
-            # 如果有找到报告，继续尝试其他选择器以获取更多
-            # 不立即break，因为可能还有其他选择器能找到不同链接
+                    # 检查是否是文章链接
+                    href_lower = href.lower()
+                    is_article_link = any(pattern in href_lower for pattern in 
+                                         ['/media-release/', '/blog/', '/pub/', 
+                                          '/publication/', '/report/', '/article/',
+                                          '/op-ed/'])
+                    
+                    # 如果链接看起来是文章且标题有一定长度
+                    if is_article_link and title and len(title) > 10:
+                        full_url = urljoin(base_url, href)
+                        reports.append({
+                            'title': title,
+                            'url': full_url,
+                            'source': 'Pembina Institute'
+                        })
     
-    # 如果上述选择器都没找到，查找包含特定路径的链接
+    # 方法3：如果上述方法都没找到，查找包含特定路径的链接
     if not reports:
         all_links = soup.find_all('a', href=True)
         for link in all_links:
@@ -602,7 +667,9 @@ def pembina_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
                  '/report/' in href or 
                  '/resource/' in href or
                  '/article/' in href or
-                 '/blog/' in href) and len(title) > 10):
+                 '/blog/' in href or
+                 '/media-release/' in href or
+                 '/op-ed/' in href) and len(title) > 10):
                 full_url = urljoin(base_url, href)
                 reports.append({
                     'title': title,

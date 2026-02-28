@@ -223,8 +223,10 @@ class MonitorService:
                     'error': '收件人邮箱列表为空，请先在设置中配置收件人邮箱。'
                 }
             
-            # 读取SMTP配置 - 使用EmailSender类属性，它已处理.env文件加载
+            # 读取邮件发送配置 - 使用EmailSender类属性，它已处理.env文件加载
             # 记录当前配置状态以帮助调试
+            provider = os.environ.get("EMAIL_PROVIDER", EmailSender.EMAIL_PROVIDER).lower()
+            logger.info(f"调试信息: 邮件提供商={provider}")
             logger.info(f"调试信息: os.environ SMTP_SERVER={os.environ.get('SMTP_SERVER', '未设置')}")
             logger.info(f"调试信息: EmailSender.SMTP_SERVER={EmailSender.SMTP_SERVER}")
             logger.info(f"调试信息: EmailSender.SMTP_PORT={EmailSender.SMTP_PORT}")
@@ -235,6 +237,9 @@ class MonitorService:
             smtp_port_str = os.environ.get("SMTP_PORT", str(EmailSender.SMTP_PORT))
             sender_email = os.environ.get("SENDER_EMAIL", EmailSender.SENDER_EMAIL)
             sender_password = os.environ.get("SENDER_PASSWORD", EmailSender.SENDER_PASSWORD)
+            sendgrid_api_key = os.environ.get("SENDGRID_API_KEY", EmailSender.SENDGRID_API_KEY)
+            mailgun_api_key = os.environ.get("MAILGUN_API_KEY", EmailSender.MAILGUN_API_KEY)
+            mailgun_domain = os.environ.get("MAILGUN_DOMAIN", EmailSender.MAILGUN_DOMAIN)
             
             # 如果密码为空，尝试从EmailSender.SENDER_PASSWORD获取
             if not sender_password and EmailSender.SENDER_PASSWORD:
@@ -247,26 +252,36 @@ class MonitorService:
                 logger.warning(f"SMTP端口格式无效: {smtp_port_str}，使用默认值{EmailSender.SMTP_PORT}")
                 smtp_port = EmailSender.SMTP_PORT
             
-            # 记录使用的SMTP配置（不包含密码）
-            logger.info(f"使用SMTP配置: 服务器={smtp_server}, 端口={smtp_port}, 发件人={sender_email}")
+            # 记录使用的配置（不包含密码和API密钥）
+            logger.info(f"使用邮件配置: 提供商={provider}, 发件人={sender_email}")
+            if provider == "smtp":
+                logger.info(f"  SMTP服务器={smtp_server}, 端口={smtp_port}")
+            elif provider == "sendgrid":
+                logger.info(f"  SendGrid API已配置")
+            elif provider == "mailgun":
+                logger.info(f"  Mailgun API已配置, 域名={mailgun_domain}")
             
             # 创建邮件发送器实例
             email_sender = EmailSender(
+                provider=provider,
                 smtp_server=smtp_server,
                 smtp_port=smtp_port,
                 sender_email=sender_email,
                 sender_password=sender_password,
+                sendgrid_api_key=sendgrid_api_key,
+                mailgun_api_key=mailgun_api_key,
+                mailgun_domain=mailgun_domain,
                 recipient_emails=recipient_emails
             )
             
-            # 测试SMTP连接
-            logger.info("测试SMTP连接...")
+            # 测试邮件服务连接
+            logger.info(f"测试{provider}邮件服务连接...")
             connection_success, connection_error = email_sender.test_connection()
             if not connection_success:
-                logger.error(f"SMTP连接测试失败: {connection_error}")
+                logger.error(f"邮件服务连接测试失败: {connection_error}")
                 return {
                     'success': False,
-                    'error': f'SMTP连接测试失败: {connection_error}'
+                    'error': f'邮件服务连接测试失败: {connection_error}'
                 }
             
             # 发送测试邮件
@@ -286,7 +301,7 @@ class MonitorService:
             else:
                 return {
                     'success': False,
-                    'error': '测试邮件发送失败，请检查SMTP配置和网络连接。'
+                    'error': '测试邮件发送失败，请检查邮件配置和网络连接。'
                 }
                 
         except Exception as e:
@@ -298,16 +313,20 @@ class MonitorService:
     
     def get_smtp_config(self) -> Dict[str, Any]:
         """
-        获取当前SMTP配置
+        获取当前邮件配置（保持向后兼容）
         
         Returns:
-            Dict[str, Any]: SMTP配置信息
+            Dict[str, Any]: 邮件配置信息
         """
         try:
-            # 从环境变量读取SMTP配置
+            # 从环境变量读取邮件配置
+            provider = os.environ.get("EMAIL_PROVIDER", EmailSender.EMAIL_PROVIDER).lower()
             smtp_server = os.environ.get("SMTP_SERVER", EmailSender.SMTP_SERVER)
             smtp_port_str = os.environ.get("SMTP_PORT", str(EmailSender.SMTP_PORT))
             sender_email = os.environ.get("SENDER_EMAIL", EmailSender.SENDER_EMAIL)
+            sendgrid_api_key = os.environ.get("SENDGRID_API_KEY", EmailSender.SENDGRID_API_KEY)
+            mailgun_api_key = os.environ.get("MAILGUN_API_KEY", EmailSender.MAILGUN_API_KEY)
+            mailgun_domain = os.environ.get("MAILGUN_DOMAIN", EmailSender.MAILGUN_DOMAIN)
             
             # 转换端口为整数
             try:
@@ -315,16 +334,33 @@ class MonitorService:
             except ValueError:
                 smtp_port = EmailSender.SMTP_PORT
             
-            # 返回配置信息（不包含密码）
-            return {
+            # 返回配置信息（不包含密码和完整API密钥）
+            config = {
                 'success': True,
+                'provider': provider,
                 'smtp_server': smtp_server,
                 'smtp_port': smtp_port,
                 'sender_email': sender_email,
-                'is_configured': bool(sender_email and sender_email != 'your_email@outlook.com')
+                'is_configured': bool(sender_email and sender_email != 'your_email@outlook.com'),
+                'has_sendgrid': bool(sendgrid_api_key and sendgrid_api_key != 'your_sendgrid_api_key_here'),
+                'has_mailgun': bool(mailgun_api_key and mailgun_api_key != 'your_mailgun_api_key_here'),
+                'mailgun_domain': mailgun_domain if mailgun_domain != 'your_mailgun_domain_here' else ''
             }
+            
+            # 安全地显示API密钥部分（仅显示前4个字符）
+            if sendgrid_api_key and len(sendgrid_api_key) > 4:
+                config['sendgrid_api_key_preview'] = sendgrid_api_key[:4] + '...'
+            else:
+                config['sendgrid_api_key_preview'] = ''
+                
+            if mailgun_api_key and len(mailgun_api_key) > 4:
+                config['mailgun_api_key_preview'] = mailgun_api_key[:4] + '...'
+            else:
+                config['mailgun_api_key_preview'] = ''
+            
+            return config
         except Exception as e:
-            logger.error(f"获取SMTP配置失败: {e}")
+            logger.error(f"获取邮件配置失败: {e}")
             return {
                 'success': False,
                 'error': str(e)
