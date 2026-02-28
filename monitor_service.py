@@ -548,6 +548,135 @@ class MonitorService:
             logger.error(f"获取监控运行记录失败: {e}")
             return []
     
+    def _extract_date_from_title(self, title: str) -> Optional[datetime]:
+        """
+        从标题中提取发布日期
+        
+        Args:
+            title: 报告标题
+            
+        Returns:
+            Optional[datetime]: 提取到的日期，如果提取失败则返回None
+        """
+        import re
+        from datetime import datetime
+        
+        if not title:
+            return None
+        
+        # 常见日期模式
+        date_patterns = [
+            # 完整月份名称 + 日期 + 年份 (February 27, 2026)
+            (r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})', '%B %d, %Y'),
+            # 缩写月份名称 + 日期 + 年份 (Feb 27, 2026)
+            (r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),\s+(\d{4})', '%b %d, %Y'),
+            # YYYY-MM-DD 格式
+            (r'(\d{4})-(\d{1,2})-(\d{1,2})', '%Y-%m-%d'),
+            # MM/DD/YYYY 格式
+            (r'(\d{1,2})/(\d{1,2})/(\d{4})', '%m/%d/%Y'),
+            # DD/MM/YYYY 格式
+            (r'(\d{1,2})/(\d{1,2})/(\d{4})', '%d/%m/%Y'),
+        ]
+        
+        for pattern, date_format in date_patterns:
+            match = re.search(pattern, title, re.IGNORECASE)
+            if match:
+                try:
+                    # 提取匹配的日期字符串
+                    date_str = match.group(0)
+                    return datetime.strptime(date_str, date_format)
+                except (ValueError, AttributeError) as e:
+                    logger.debug(f"日期解析失败: {date_str}, 格式: {date_format}, 错误: {e}")
+                    continue
+        
+        return None
+    
+    def _get_publish_date(self, report: Dict[str, Any]) -> Optional[datetime]:
+        """
+        获取报告的发布日期
+        
+        优先使用publish_date字段，如果为空则从标题中提取
+        
+        Args:
+            report: 报告字典
+            
+        Returns:
+            Optional[datetime]: 发布日期，如果无法获取则返回None
+        """
+        from datetime import datetime
+        
+        # 首先尝试使用publish_date字段
+        publish_date_str = report.get('publish_date')
+        if publish_date_str:
+            try:
+                # 尝试解析ISO格式日期
+                return datetime.fromisoformat(publish_date_str.replace('Z', '+00:00'))
+            except (ValueError, AttributeError):
+                # 如果ISO格式解析失败，尝试其他常见格式
+                date_formats = [
+                    '%Y-%m-%d %H:%M:%S',
+                    '%Y-%m-%d',
+                    '%Y/%m/%d',
+                    '%d/%m/%Y',
+                ]
+                
+                for date_format in date_formats:
+                    try:
+                        return datetime.strptime(publish_date_str, date_format)
+                    except ValueError:
+                        continue
+        
+        # 如果publish_date字段为空或解析失败，尝试从标题中提取
+        title = report.get('title', '')
+        return self._extract_date_from_title(title)
+    
+    def get_recent_tweets(self, days: int = 30, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        获取最近发布的推文（报告）
+        
+        Args:
+            days: 最近多少天内（默认30天）
+            limit: 返回的最大数量限制（默认50）
+            
+        Returns:
+            List[Dict[str, Any]]: 推文列表，包含额外字段publish_date_parsed
+        """
+        try:
+            from datetime import datetime, timedelta
+            
+            with DatabaseManager(self.db_path) as db:
+                all_reports = db.get_all_reports()
+                
+                # 计算截止日期
+                cutoff_date = datetime.now() - timedelta(days=days)
+                
+                # 处理每个报告，提取发布日期
+                recent_tweets = []
+                for report in all_reports:
+                    # 获取发布日期
+                    publish_date = self._get_publish_date(report)
+                    
+                    # 如果没有发布日期，跳过
+                    if not publish_date:
+                        continue
+                    
+                    # 检查是否在指定时间范围内
+                    if publish_date >= cutoff_date:
+                        # 添加解析后的日期字段
+                        report_with_date = report.copy()
+                        report_with_date['publish_date_parsed'] = publish_date
+                        recent_tweets.append(report_with_date)
+                
+                # 按发布日期降序排序（最新的在前）
+                recent_tweets.sort(key=lambda x: x['publish_date_parsed'], reverse=True)
+                
+                # 限制返回数量
+                return recent_tweets[:limit]
+                
+        except Exception as e:
+            logger.error(f"获取最近推文失败: {e}")
+            return []
+
     def update_settings(self, recipient_emails: List[str] = None, 
                        check_interval_hours: float = None) -> bool:
         """

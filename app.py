@@ -242,6 +242,36 @@ def api_get_reports():
         }), 500
 
 
+@app.route('/api/recent_tweets', methods=['GET'])
+def api_get_recent_tweets():
+    """获取最近推文API"""
+    try:
+        days = request.args.get('days', 30, type=int)
+        limit = request.args.get('limit', 20, type=int)
+        
+        # 参数验证
+        if days < 1 or days > 365:
+            days = 30
+        if limit < 1 or limit > 100:
+            limit = 20
+        
+        recent_tweets = monitor_service.get_recent_tweets(days=days, limit=limit)
+        
+        return jsonify({
+            'success': True,
+            'tweets': recent_tweets,
+            'count': len(recent_tweets),
+            'days': days
+        })
+        
+    except Exception as e:
+        logger.error(f"获取最近推文API失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route('/api/send_unsent', methods=['POST'])
 def api_send_unsent():
     """发送未发送的报告API"""
@@ -353,6 +383,27 @@ def monitor_runs_page():
         return render_template('monitor_runs.html', runs=runs)
     except Exception as e:
         logger.error(f"监控运行记录页面加载失败: {e}")
+        return render_template('error.html', error=str(e)), 500
+
+@app.route('/tweets', methods=['GET'])
+def tweets_page():
+    """近期推文页面"""
+    try:
+        # 获取参数
+        days = request.args.get('days', 30, type=int)
+        limit = request.args.get('limit', 20, type=int)
+        
+        # 参数验证
+        if days < 1 or days > 365:
+            days = 30
+        if limit < 1 or limit > 100:
+            limit = 20
+        
+        # 获取最近推文
+        tweets = monitor_service.get_recent_tweets(days=days, limit=limit)
+        return render_template('tweets.html', tweets=tweets, days=days, limit=limit)
+    except Exception as e:
+        logger.error(f"近期推文页面加载失败: {e}")
         return render_template('error.html', error=str(e)), 500
 
 @app.route('/api/smtp_config', methods=['GET'])
