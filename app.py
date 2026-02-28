@@ -210,8 +210,15 @@ def api_update_settings():
 def reports_page():
     """数据查看页面"""
     try:
-        reports = monitor_service.get_recent_reports(limit=20)
-        return render_template('reports.html', reports=reports)
+        # 获取参数
+        limit = request.args.get('limit', 20, type=int)
+        
+        # 参数验证
+        if limit < 1 or limit > 100:
+            limit = 20
+        
+        reports = monitor_service.get_recent_reports(limit=limit)
+        return render_template('reports.html', reports=reports, limit=limit)
     except Exception as e:
         logger.error(f"报告页面加载失败: {e}")
         return render_template('error.html', error=str(e)), 500

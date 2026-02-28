@@ -102,16 +102,16 @@
                         <small class="text-muted">
                             显示 <span id="shown-count">{{ reports|length }}</span> 条报告
                             {% if reports %}
-                                (最新 {{ reports|length }} 条)
+                                (最新 {{ limit }} 条)
                             {% endif %}
                         </small>
                     </div>
                     <div>
                         <select id="limit-select" class="form-select form-select-sm" style="width: auto;">
-                            <option value="10">显示10条</option>
-                            <option value="20" selected>显示20条</option>
-                            <option value="50">显示50条</option>
-                            <option value="100">显示100条</option>
+                            <option value="10" {% if limit == 10 %}selected{% endif %}>显示10条</option>
+                            <option value="20" {% if limit == 20 or not limit %}selected{% endif %}>显示20条</option>
+                            <option value="50" {% if limit == 50 %}selected{% endif %}>显示50条</option>
+                            <option value="100" {% if limit == 100 %}selected{% endif %}>显示100条</option>
                         </select>
                     </div>
                 </div>
