@@ -653,12 +653,22 @@ class MonitorService:
                 # 处理每个报告，提取发布日期
                 recent_tweets = []
                 for report in all_reports:
-                    # 获取发布日期
+                    # 获取发布日期（优先使用发布日期，其次使用发现时间）
                     publish_date = self._get_publish_date(report)
                     
-                    # 如果没有发布日期，跳过
+                    # 如果没有发布日期，尝试使用发现时间
                     if not publish_date:
-                        continue
+                        discovered_time_str = report.get('discovered_time')
+                        if discovered_time_str:
+                            try:
+                                # 尝试解析ISO格式的发现时间
+                                publish_date = datetime.fromisoformat(discovered_time_str.replace('Z', '+00:00'))
+                            except (ValueError, AttributeError):
+                                # 如果解析失败，跳过该报告
+                                continue
+                        else:
+                            # 既没有发布日期也没有发现时间，跳过
+                            continue
                     
                     # 检查是否在指定时间范围内
                     if publish_date >= cutoff_date:
