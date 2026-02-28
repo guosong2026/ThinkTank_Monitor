@@ -6,7 +6,15 @@ Flask Web界面主程序
 import json
 import logging
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
-from flask_cors import CORS
+
+# 可选依赖：CORS支持
+try:
+    from flask_cors import CORS
+    CORS_AVAILABLE = True
+except ImportError:
+    CORS_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("flask_cors模块未安装，CORS支持已禁用")
 
 from monitor_service import get_monitor_service
 
@@ -20,7 +28,11 @@ logger = logging.getLogger(__name__)
 # 创建Flask应用
 app = Flask(__name__)
 app.secret_key = 'thinktank_monitor_secret_key_2024'  # 在生产环境中应使用环境变量
-CORS(app)  # 启用CORS支持
+if CORS_AVAILABLE:
+    CORS(app)  # 启用CORS支持
+    logger.info("CORS支持已启用")
+else:
+    logger.info("CORS支持已禁用")
 
 # 获取监控服务实例
 monitor_service = get_monitor_service()

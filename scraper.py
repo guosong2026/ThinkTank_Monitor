@@ -9,7 +9,11 @@ from typing import List, Dict, Optional
 from urllib.parse import urljoin
 
 import requests
+import urllib3
 from bs4 import BeautifulSoup
+
+# 禁用SSL警告（在使用代理或自签名证书时）
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -17,22 +21,41 @@ logger = logging.getLogger(__name__)
 class WebsiteScraper:
     """网站抓取器类"""
     
-    def __init__(self, base_url: str, user_agent: Optional[str] = None):
+    def __init__(self, base_url: str, user_agent: Optional[str] = None, proxy: Optional[str] = None):
         """
         初始化网站抓取器
         
         Args:
             base_url: 目标网站基础URL
             user_agent: 用户代理字符串（可选）
+            proxy: 代理服务器URL，例如 'http://proxy.example.com:8080'（可选）
         """
         self.base_url = base_url
         self.session = requests.Session()
         
         # 设置请求头
         headers = {
-            'User-Agent': user_agent or 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': user_agent or 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
         }
         self.session.headers.update(headers)
+        
+        # 设置代理
+        self.proxy = proxy
+        if not self.proxy:
+            # 尝试从环境变量读取代理配置
+            import os
+            self.proxy = os.environ.get('HTTPS_PROXY') or os.environ.get('HTTP_PROXY') or os.environ.get('https_proxy') or os.environ.get('http_proxy')
+        
+        if self.proxy:
+            logger.info(f"使用代理: {self.proxy}")
+        else:
+            logger.info("未配置代理")
     
     def fetch_page(self, url: str) -> Optional[str]:
         """
@@ -49,7 +72,15 @@ class WebsiteScraper:
         """
         try:
             logger.info(f"正在获取页面: {url}")
-            response = self.session.get(url, timeout=30)
+            # 准备代理配置
+            proxies = None
+            if self.proxy:
+                proxies = {
+                    'http': self.proxy,
+                    'https': self.proxy
+                }
+            
+            response = self.session.get(url, timeout=30, proxies=proxies, verify=False)
             response.raise_for_status()
             
             # 检查内容类型

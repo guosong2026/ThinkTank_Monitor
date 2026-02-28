@@ -5,6 +5,7 @@ lxml>=4.9.0
 
 # Web界面依赖
 Flask>=2.3.0
+flask-cors>=4.0.0
 APScheduler>=3.10.0
 
 # 开发依赖（可选）
