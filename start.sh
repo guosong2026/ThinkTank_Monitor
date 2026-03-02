@@ -48,9 +48,14 @@ echo "=================================="
 # 使用gunicorn作为WSGI服务器（如果已安装）
 if $PYTHON_CMD -c "import gunicorn" 2>/dev/null; then
     echo "检测到gunicorn，使用WSGI服务器启动..."
+    HOST=${HOST:-0.0.0.0}
     PORT=${PORT:-5000}
     WORKERS=$(( $(nproc --all) * 2 + 1 ))
     WORKERS=$(( WORKERS > 4 ? 4 : WORKERS ))  # 限制最大worker数
+    
+    # 导出环境变量供应用使用
+    export HOST
+    export PORT
     
     exec gunicorn \
         --bind 0.0.0.0:$PORT \
@@ -67,6 +72,8 @@ else
     # 设置环境变量
     export FLASK_APP=app.py
     export FLASK_ENV=production
+    export HOST=${HOST:-0.0.0.0}
+    export PORT=${PORT:-5000}
     
     # 启动Flask应用
     exec $PYTHON_CMD wsgi.py

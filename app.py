@@ -475,7 +475,7 @@ if __name__ == '__main__':
     import os
     
     # 从环境变量获取主机和端口，适配Wispbyte等云平台
-    host = os.environ.get('HOST', '127.0.0.1')
+    host = os.environ.get('HOST', '0.0.0.0')
     port = int(os.environ.get('PORT', 5000))
     
     print("启动ThinkTank Monitor Web界面...")
