@@ -32,6 +32,8 @@ class WebsiteScraper:
         """
         self.base_url = base_url
         self.session = requests.Session()
+        # 不自动使用环境变量中的代理配置，避免代理连接失败
+        self.session.trust_env = False
         
         # 设置请求头
         headers = {
@@ -90,6 +92,16 @@ class WebsiteScraper:
             
             return response.text
             
+        except requests.exceptions.ProxyError as e:
+            # 代理连接失败，尝试不使用代理
+            logger.warning(f"代理连接失败 ({e})，尝试不使用代理...")
+            try:
+                response = self.session.get(url, timeout=30, proxies={'http': None, 'https': None}, verify=False)
+                response.raise_for_status()
+                return response.text
+            except requests.exceptions.RequestException as retry_e:
+                logger.error(f"不使用代理重试也失败: {retry_e}")
+                return None
         except requests.exceptions.Timeout:
             logger.error(f"请求超时: {url}")
             return None

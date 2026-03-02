@@ -404,12 +404,28 @@ class MultiWebsiteMonitor:
         from requests.exceptions import RequestException
         
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1'
         }
+        # 针对特定网站添加额外请求头
+        if 'worldwildlife.org' in url:
+            headers['Referer'] = 'https://www.worldwildlife.org/'
+            headers['Origin'] = 'https://www.worldwildlife.org'
         
         try:
             logger.debug(f"正在获取页面: {url}")
-            response = requests.get(url, headers=headers, timeout=30)
+            # 明确禁用代理，避免PythonAnywhere等环境中代理配置导致连接失败
+            response = requests.get(url, headers=headers, timeout=30, 
+                                   proxies={'http': None, 'https': None, 'ftp': None})
             response.raise_for_status()
             return response.text
         except RequestException as e:
