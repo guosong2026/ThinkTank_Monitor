@@ -470,14 +470,22 @@ def trigger_check():
 
 
 if __name__ == '__main__':
-    # 启动Flask开发服务器
+    # 启动Flask开发服务器（仅用于开发环境）
+    # 生产环境应使用WSGI服务器如gunicorn、uWSGI等
+    import os
+    
+    # 从环境变量获取主机和端口，适配Wispbyte等云平台
+    host = os.environ.get('HOST', '127.0.0.1')
+    port = int(os.environ.get('PORT', 5000))
+    
     print("启动ThinkTank Monitor Web界面...")
-    print("访问地址: http://127.0.0.1:5000")
+    print(f"监听地址: {host}:{port}")
+    print(f"访问地址: http://{host}:{port}")
     print("按 Ctrl+C 停止服务器")
     
     app.run(
-        host='127.0.0.1',
-        port=5000,
-        debug=False,  # 生产环境应设置为False
+        host=host,
+        port=port,
+        debug=False,  # 生产环境禁用调试模式
         threaded=True
     )
