@@ -72,45 +72,73 @@ class WebsiteScraper:
         Raises:
             requests.RequestException: 网络请求错误
         """
-        try:
-            logger.info(f"正在获取页面: {url}")
-            # 准备代理配置
-            proxies = None
-            if self.proxy:
-                proxies = {
-                    'http': self.proxy,
-                    'https': self.proxy
-                }
-            
-            response = self.session.get(url, timeout=30, proxies=proxies, verify=False)
-            response.raise_for_status()
-            
-            # 检查内容类型
-            content_type = response.headers.get('content-type', '').lower()
-            if 'text/html' not in content_type:
-                logger.warning(f"返回的内容类型不是HTML: {content_type}")
-            
-            return response.text
-            
-        except requests.exceptions.ProxyError as e:
-            # 代理连接失败，尝试不使用代理
-            logger.warning(f"代理连接失败 ({e})，尝试不使用代理...")
+        import time
+        from requests.exceptions import ConnectionError, Timeout
+        
+        max_retries = 3
+        base_delay = 2  # 初始延迟秒数
+        
+        for retry_count in range(max_retries):
             try:
-                response = self.session.get(url, timeout=30, proxies={'http': None, 'https': None}, verify=False)
+                if retry_count > 0:
+                    logger.info(f"第 {retry_count + 1} 次重试获取页面: {url}")
+                    # 指数退避延迟
+                    delay = base_delay * (2 ** (retry_count - 1))
+                    time.sleep(delay)
+                else:
+                    logger.info(f"正在获取页面: {url}")
+                
+                # 准备代理配置
+                proxies = None
+                if self.proxy:
+                    proxies = {
+                        'http': self.proxy,
+                        'https': self.proxy
+                    }
+                
+                # 分别设置连接超时和读取超时：连接超时15秒，读取超时45秒
+                response = self.session.get(url, timeout=(15, 45), proxies=proxies, verify=False)
                 response.raise_for_status()
+                
+                # 检查内容类型
+                content_type = response.headers.get('content-type', '').lower()
+                if 'text/html' not in content_type:
+                    logger.warning(f"返回的内容类型不是HTML: {content_type}")
+                
                 return response.text
-            except requests.exceptions.RequestException as retry_e:
-                logger.error(f"不使用代理重试也失败: {retry_e}")
+                
+            except requests.exceptions.ProxyError as e:
+                # 代理连接失败，尝试不使用代理
+                logger.warning(f"代理连接失败 ({e})，尝试不使用代理...")
+                try:
+                    response = self.session.get(url, timeout=(15, 45), proxies={'http': None, 'https': None}, verify=False)
+                    response.raise_for_status()
+                    return response.text
+                except requests.exceptions.RequestException as retry_e:
+                    logger.error(f"不使用代理重试也失败: {retry_e}")
+                    # 继续外层循环进行重试
+                    if retry_count < max_retries - 1:
+                        continue
+                    else:
+                        return None
+            except (ConnectionError, Timeout) as e:
+                # 连接错误或超时，进行重试
+                if retry_count < max_retries - 1:
+                    logger.warning(f"连接失败 ({e})，{base_delay * (2 ** retry_count)}秒后重试...")
+                    continue
+                else:
+                    logger.error(f"连接失败，已达最大重试次数 {max_retries}: {url}: {e}")
+                    return None
+            except requests.exceptions.HTTPError as e:
+                # HTTP错误（如404, 403），不重试
+                logger.error(f"HTTP错误 {e.response.status_code}: {url}")
                 return None
-        except requests.exceptions.Timeout:
-            logger.error(f"请求超时: {url}")
-            return None
-        except requests.exceptions.HTTPError as e:
-            logger.error(f"HTTP错误 {e.response.status_code}: {url}")
-            return None
-        except requests.exceptions.RequestException as e:
-            logger.error(f"请求失败: {e}")
-            return None
+            except requests.exceptions.RequestException as e:
+                # 其他请求异常，不重试
+                logger.error(f"请求失败: {e}")
+                return None
+        
+        return None
     
     def extract_reports(self, html_content: str) -> List[Dict[str, str]]:
         """

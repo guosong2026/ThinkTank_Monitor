@@ -363,6 +363,22 @@ class MultiWebsiteMonitor:
         self.check_interval_seconds = check_interval_hours * 3600
         self.enable_email = enable_email
         
+        # 创建HTTP会话，重用连接提高性能
+        import requests
+        self.session = requests.Session()
+        # 不信任环境变量中的代理配置，避免代理连接失败
+        self.session.trust_env = False
+        # 设置默认请求头
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+        })
+        
         # 初始化邮件发送器（如果启用）
         self.email_sender = None
         if self.enable_email:
@@ -400,37 +416,51 @@ class MultiWebsiteMonitor:
         Returns:
             str: HTML内容，失败时返回None
         """
-        import requests
-        from requests.exceptions import RequestException
+        import time
+        from requests.exceptions import RequestException, ConnectionError, Timeout
         
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'DNT': '1',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-User': '?1'
-        }
         # 针对特定网站添加额外请求头
+        additional_headers = {}
         if 'worldwildlife.org' in url:
-            headers['Referer'] = 'https://www.worldwildlife.org/'
-            headers['Origin'] = 'https://www.worldwildlife.org'
+            additional_headers['Referer'] = 'https://www.worldwildlife.org/'
+            additional_headers['Origin'] = 'https://www.worldwildlife.org'
         
-        try:
-            logger.debug(f"正在获取页面: {url}")
-            # 明确禁用代理，避免PythonAnywhere等环境中代理配置导致连接失败
-            response = requests.get(url, headers=headers, timeout=30, 
-                                   proxies={'http': None, 'https': None, 'ftp': None})
-            response.raise_for_status()
-            return response.text
-        except RequestException as e:
-            logger.error(f"获取页面失败 {url}: {e}")
-            return None
+        max_retries = 3
+        base_delay = 2  # 初始延迟秒数
+        
+        for retry_count in range(max_retries):
+            try:
+                if retry_count > 0:
+                    logger.info(f"第 {retry_count + 1} 次重试获取页面: {url}")
+                    # 指数退避延迟
+                    delay = base_delay * (2 ** (retry_count - 1))
+                    time.sleep(delay)
+                else:
+                    logger.debug(f"正在获取页面: {url}")
+                
+                # 使用共享的session，添加特定网站的额外请求头
+                # 分别设置连接超时和读取超时：连接超时15秒，读取超时45秒
+                response = self.session.get(url, timeout=(15, 45), 
+                                       proxies={'http': None, 'https': None, 'ftp': None},
+                                       verify=False,  # 关闭SSL验证，避免证书问题
+                                       headers=additional_headers if additional_headers else None)
+                response.raise_for_status()
+                return response.text
+                
+            except (ConnectionError, Timeout) as e:
+                # 连接错误或超时，进行重试
+                if retry_count < max_retries - 1:
+                    logger.warning(f"连接失败 ({e})，{base_delay * (2 ** retry_count)}秒后重试...")
+                    continue
+                else:
+                    logger.error(f"连接失败，已达最大重试次数 {max_retries}: {url}: {e}")
+                    return None
+            except RequestException as e:
+                # 其他请求异常（如HTTP错误），不重试
+                logger.error(f"获取页面失败 {url}: {e}")
+                return None
+        
+        return None
     
     def run_once(self) -> Dict[str, int]:
         """
