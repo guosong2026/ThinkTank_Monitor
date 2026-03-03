@@ -39,9 +39,33 @@ class WebsiteConfig:
             List[Dict[str, str]]: 报告列表，每个报告包含'title'和'url'
         """
         if self.parser_func:
-            return self.parser_func(html_content, base_url)
+            reports = self.parser_func(html_content, base_url)
         else:
-            return self._default_parser(html_content, base_url)
+            reports = self._default_parser(html_content, base_url)
+        
+        # 对所有报告应用过滤和清理
+        filtered_reports = []
+        for report in reports:
+            cleaned_title = self._clean_title(report['title'])
+            if not cleaned_title:
+                continue
+                
+            if self._is_report_link(report['url'], cleaned_title):
+                filtered_reports.append({
+                    'title': cleaned_title,
+                    'url': report['url'],
+                    'source': self.name
+                })
+        
+        # 去重
+        unique_reports = []
+        seen_urls = set()
+        for report in filtered_reports:
+            if report['url'] not in seen_urls:
+                seen_urls.add(report['url'])
+                unique_reports.append(report)
+        
+        return unique_reports
     
     def _default_parser(self, html_content: str, base_url: str) -> List[Dict[str, str]]:
         """
@@ -1110,6 +1134,12 @@ def green_alliance_parser(html_content: str, base_url: str) -> List[Dict[str, st
     reports = []
     soup = BeautifulSoup(html_content, 'lxml')
     
+    # 导入WebsiteConfig以使用其清理和过滤方法
+    from website_configs import WebsiteConfig
+    
+    # 创建临时WebsiteConfig实例
+    config = WebsiteConfig('Green Alliance', base_url)
+    
     # Green Alliance特定选择器
     selectors = [
         'article a',
@@ -1132,12 +1162,20 @@ def green_alliance_parser(html_content: str, base_url: str) -> List[Dict[str, st
                 href = link.get('href', '')
                 
                 if href and title:
+                    # 清理标题
+                    cleaned_title = config._clean_title(title)
+                    if not cleaned_title:
+                        continue
+                    
                     full_url = urljoin(base_url, href)
-                    reports.append({
-                        'title': title,
-                        'url': full_url,
-                        'source': 'Green Alliance'
-                    })
+                    
+                    # 检查是否是报告链接
+                    if config._is_report_link(full_url, cleaned_title):
+                        reports.append({
+                            'title': cleaned_title,
+                            'url': full_url,
+                            'source': 'Green Alliance'
+                        })
             break
     
     # 如果上述选择器都没找到，查找包含特定路径的链接
@@ -1147,19 +1185,27 @@ def green_alliance_parser(html_content: str, base_url: str) -> List[Dict[str, st
             href = link['href']
             title = link.text.strip()
             
+            # 清理标题
+            cleaned_title = config._clean_title(title)
+            if not cleaned_title:
+                continue
+            
             # 过滤可能的出版物或文章链接
             if (('/publication/' in href or 
                  '/resource/' in href or 
                  '/article/' in href or 
                  '/news/' in href or
                  '/blog/' in href or
-                 '/report/' in href) and len(title) > 10):
+                 '/report/' in href) and len(cleaned_title) > 10):
                 full_url = urljoin(base_url, href)
-                reports.append({
-                    'title': title,
-                    'url': full_url,
-                    'source': 'Green Alliance'
-                })
+                
+                # 检查是否是报告链接
+                if config._is_report_link(full_url, cleaned_title):
+                    reports.append({
+                        'title': cleaned_title,
+                        'url': full_url,
+                        'source': 'Green Alliance'
+                    })
     
     # 去重
     unique_reports = []
@@ -1192,6 +1238,12 @@ def pembina_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     reports = []
     soup = BeautifulSoup(html_content, 'lxml')
     
+    # 导入WebsiteConfig以使用其清理和过滤方法
+    from website_configs import WebsiteConfig
+    
+    # 创建临时WebsiteConfig实例
+    config = WebsiteConfig('Pembina Institute', base_url)
+    
     # 方法1：直接查找卡片中的文章链接（针对新网站结构优化）
     cards = soup.select('.card')
     
@@ -1218,8 +1270,13 @@ def pembina_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
             title = link.text.strip()
             title = ' '.join(title.split())
             
+            # 使用WebsiteConfig的清理方法
+            cleaned_title = config._clean_title(title)
+            if not cleaned_title:
+                continue
+            
             # 如果标题太短或为空，可能是图标链接，跳过
-            if not title or len(title) < 10:
+            if not cleaned_title or len(cleaned_title) < 10:
                 continue
             
             # 检查标题是否包含日期模式（进一步确认是文章链接）
@@ -1246,13 +1303,16 @@ def pembina_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
             has_type = any(indicator in title for indicator in type_indicators)
             
             # 如果标题包含日期或类型，或者长度足够，则认为是文章
-            if has_date or has_type or len(title) > 20:
+            if has_date or has_type or len(cleaned_title) > 20:
                 full_url = urljoin(base_url, href)
-                reports.append({
-                    'title': title,
-                    'url': full_url,
-                    'source': 'Pembina Institute'
-                })
+                
+                # 检查是否是报告链接
+                if config._is_report_link(full_url, cleaned_title):
+                    reports.append({
+                        'title': cleaned_title,
+                        'url': full_url,
+                        'source': 'Pembina Institute'
+                    })
                 # 找到一个有效链接后，跳出内层循环，处理下一个卡片
                 break
     
