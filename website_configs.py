@@ -152,6 +152,10 @@ class WebsiteConfig:
             r'^\s*next\s+page\s*$',         # "next page"
             r'^\s*previous\s+page\s*$',     # "previous page"
             r'^\s*page\s+\d+\s*$',          # "page 1", "page 2", 等等
+            r'^\s*privacy\s+notice\s*$',    # "privacy notice"
+            r'^\s*privacy\s+policy\s*$',    # "privacy policy"
+            r'^\s*terms\s+of\s+use\s*$',    # "terms of use"
+            r'^\s*our\s+research\s+culture\s*$',  # "our research culture"
             r'^\s*click\s+here\s*$',        # "click here"
             r'^\s*learn\s+more\s*$',        # "learn more"
             r'^\s*continue\s+reading\s*$',  # "continue reading"
@@ -161,6 +165,13 @@ class WebsiteConfig:
             r'^\s*email\s*$',               # "email"
             r'^\s*comment\s*$',             # "comment"
             r'^\s*follow\s+us\s*$',         # "follow us"
+            r'^\s*follow\s*$',              # "follow"
+            r'^\s*sign\s+up\s*$',           # "sign up"
+            r'^\s*sign\s+in\s*$',           # "sign in"
+            r'^\s*log\s+in\s*$',            # "log in"
+            r'^\s*register\s*$',            # "register"
+            r'^\s*authors\s*$',             # "authors"
+            r'^\s*authorship\s*$',          # "authorship"
         ]
         
         import re
@@ -169,11 +180,17 @@ class WebsiteConfig:
             if re.match(pattern, title_lower):
                 return ""  # 返回空字符串，表示这不是有效标题
         
-        # 移除常见前缀
+        # 移除常见前缀（不区分大小写，并处理分隔符）
         prefixes = ['Read more', 'Read', 'Download', 'PDF', '»', '›', 'Continue reading', 'Learn more']
         for prefix in prefixes:
-            if title.startswith(prefix):
+            # 不区分大小写检查
+            if title.lower().startswith(prefix.lower()):
+                # 移除前缀
                 title = title[len(prefix):].strip()
+                # 如果移除后以常见分隔符开头，也移除它们
+                separators = [':', '-', '–', '—', '»', '›', '...', '.']
+                while title and any(title.startswith(sep) for sep in separators):
+                    title = title[1:].strip()
         
         # 移除常见后缀
         suffixes = ['»', '›', '...', 'read more', 'read more »', 'learn more']
