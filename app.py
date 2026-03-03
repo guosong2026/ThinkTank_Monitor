@@ -295,16 +295,22 @@ def api_get_recent_tweets():
 def api_send_unsent():
     """发送未发送的报告API"""
     try:
-        # 这个功能需要email_sender模块支持
-        # 暂时使用run_once，因为它会自动发送新报告的邮件
-        # 未来可以扩展monitor_service以支持发送未发送报告
-        results = monitor_service.run_once()
+        # 调用监控服务的发送未发送报告功能
+        result = monitor_service.send_unsent_reports()
         
-        return jsonify({
-            'success': True,
-            'message': '已尝试发送新报告邮件',
-            'results': results
-        })
+        if result.get('success'):
+            return jsonify({
+                'success': True,
+                'message': result.get('message', '未发送报告邮件发送完成'),
+                'sent_count': result.get('sent_count', 0),
+                'failed_count': result.get('failed_count', 0),
+                'total_count': result.get('total_count', 0)
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', '发送未发送报告失败')
+            }), 500
         
     except Exception as e:
         logger.error(f"发送未发送报告API失败: {e}")

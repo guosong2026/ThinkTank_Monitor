@@ -687,6 +687,83 @@ class MonitorService:
             logger.error(f"获取最近推文失败: {e}")
             return []
 
+    def send_unsent_reports(self) -> Dict[str, Any]:
+        """
+        发送未发送的报告邮件
+        
+        Returns:
+            Dict[str, Any]: 发送结果信息
+        """
+        try:
+            # 确保监控器存在（用于获取邮件发送器）
+            if self.monitor is None:
+                self.monitor = self._create_monitor()
+            
+            if self.monitor is None:
+                return {
+                    'success': False,
+                    'error': '无法创建监控器，邮件发送失败'
+                }
+            
+            # 获取未发送的报告
+            with DatabaseManager(self.db_path) as db:
+                unsent_reports = db.get_unsent_reports()
+                
+            if not unsent_reports:
+                return {
+                    'success': True,
+                    'message': '没有未发送的报告',
+                    'sent_count': 0
+                }
+            
+            sent_count = 0
+            failed_count = 0
+            
+            # 使用监控器的邮件发送器
+            email_sender = self.monitor.email_sender
+            if not email_sender:
+                return {
+                    'success': False,
+                    'error': '邮件发送器未初始化'
+                }
+            
+            for report in unsent_reports:
+                try:
+                    success = email_sender.send_report_notification(
+                        title=report['title'],
+                        url=report['url'],
+                        source_website=report['source_website']
+                    )
+                    
+                    if success:
+                        # 标记报告为已发送
+                        with DatabaseManager(self.db_path) as db:
+                            db.mark_report_as_sent(report['id'])
+                        sent_count += 1
+                        logger.info(f"未发送报告邮件发送成功: {report['title']}")
+                    else:
+                        failed_count += 1
+                        logger.warning(f"未发送报告邮件发送失败: {report['title']}")
+                except Exception as e:
+                    failed_count += 1
+                    logger.error(f"发送未发送报告时出错: {e}")
+            
+            message = f"已发送 {sent_count} 个未发送报告，失败 {failed_count} 个"
+            return {
+                'success': True,
+                'message': message,
+                'sent_count': sent_count,
+                'failed_count': failed_count,
+                'total_count': len(unsent_reports)
+            }
+            
+        except Exception as e:
+            logger.error(f"发送未发送报告失败: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
     def update_settings(self, recipient_emails: List[str] = None, 
                        check_interval_hours: float = None) -> bool:
         """
