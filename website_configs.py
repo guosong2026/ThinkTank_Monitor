@@ -115,13 +115,58 @@ class WebsiteConfig:
     
     def _clean_title(self, title: str) -> str:
         """清理标题文本"""
+        if not title:
+            return ""
+            
         title = ' '.join(title.split())
         
-        # 移除常见前缀/后缀
-        prefixes = ['Read more', 'Read', 'Download', 'PDF', '»', '›']
+        # 定义常见非标题文本模式（如果标题匹配这些模式，则返回空字符串）
+        non_title_patterns = [
+            r'^\s*read\s+more(\s+»)?\s*$',  # "read more" 或 "read more »"
+            r'^\s*read\s*$',                # "read"
+            r'^\s*more\s*$',                # "more"
+            r'^\s*next\s+page\s*$',         # "next page"
+            r'^\s*previous\s+page\s*$',     # "previous page"
+            r'^\s*page\s+\d+\s*$',          # "page 1", "page 2", 等等
+            r'^\s*click\s+here\s*$',        # "click here"
+            r'^\s*learn\s+more\s*$',        # "learn more"
+            r'^\s*continue\s+reading\s*$',  # "continue reading"
+            r'^\s*download\s*$',            # "download"
+            r'^\s*print\s*$',               # "print"
+            r'^\s*share\s*$',               # "share"
+            r'^\s*email\s*$',               # "email"
+            r'^\s*comment\s*$',             # "comment"
+            r'^\s*follow\s+us\s*$',         # "follow us"
+        ]
+        
+        import re
+        title_lower = title.lower()
+        for pattern in non_title_patterns:
+            if re.match(pattern, title_lower):
+                return ""  # 返回空字符串，表示这不是有效标题
+        
+        # 移除常见前缀
+        prefixes = ['Read more', 'Read', 'Download', 'PDF', '»', '›', 'Continue reading', 'Learn more']
         for prefix in prefixes:
             if title.startswith(prefix):
                 title = title[len(prefix):].strip()
+        
+        # 移除常见后缀
+        suffixes = ['»', '›', '...', 'read more', 'read more »', 'learn more']
+        for suffix in suffixes:
+            if title.lower().endswith(suffix.lower()):
+                # 移除后缀并清理
+                title = title[:len(title)-len(suffix)].strip()
+        
+        # 如果清理后标题太短（少于10个字符），可能不是有效标题
+        if len(title) < 10:
+            # 检查是否包含明显的文章标题词汇
+            article_indicators = ['report', 'study', 'research', 'analysis', 'article', 
+                                'publication', 'press release', 'news', 'blog', 'paper',
+                                'policy', 'brief', 'insight', 'perspective', 'commentary']
+            has_indicator = any(indicator in title.lower() for indicator in article_indicators)
+            if not has_indicator:
+                return ""  # 太短且不包含文章指示词，可能不是有效标题
         
         return title
     
@@ -131,7 +176,14 @@ class WebsiteConfig:
             'home', 'about', 'contact', 'privacy', 'terms', 'login',
             'signup', 'subscribe', 'twitter', 'facebook', 'linkedin',
             'instagram', 'youtube', 'rss', 'feed', 'search', 'donate',
-            'careers', 'press', 'media', 'newsletter', 'cookie'
+            'careers', 'press', 'media', 'newsletter', 'cookie',
+            'next page', 'previous page', 'page', 'next', 'previous',
+            'privacy notice', 'privacy policy', 'terms of use',
+            'our research culture', 'read more', 'read more »', 'read',
+            'more', 'continue reading', 'learn more', 'click here',
+            'download', 'share', 'print', 'email', 'comment',
+            'authors', 'authorship', 'follow us', 'follow',
+            'sign up', 'sign in', 'log in', 'register'
         ]
         
         url_lower = url.lower()
