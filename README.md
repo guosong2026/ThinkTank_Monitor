@@ -261,7 +261,7 @@ ThinkTank_Monitor/
 
 主要功能：
 - 定义`WebsiteConfig`类表示网站配置
-- 提供默认的5个网站配置（CONCITO、WWF、EEB、Green Alliance、Pembina Institute）
+- 提供默认的13个网站配置（CONCITO、EEB、Green Alliance、Pembina Institute、Ecotrust、Nature Conservancy、IISD、Ecologic Institute、IEEP、IUCN、Stockholm Resilience、Biodiversity Council、Lincoln Institute）
 - 每个网站有独立的解析器函数处理网站特定结构
 - 支持添加、移除和修改网站配置
 - 提供`get_all_websites()`函数获取所有配置
@@ -329,13 +329,21 @@ ThinkTank_Monitor/
 
 ### 1. 默认监控的网站
 
-工具默认监控以下五个网站：
+工具默认监控以下十三个网站：
 
 1. **CONCITO** (https://concito.dk/en/analyser) - 绿色智库分析报告
-2. **WWF** (https://www.worldwildlife.org/news/press-releases/) - 世界自然基金会新闻稿
-3. **EEB** (https://eeb.org/en/library/) - 欧洲环境署图书馆（自动处理Cookie弹窗）
-4. **Green Alliance** (https://green-alliance.org.uk/) - 英国绿色联盟智库报告
-5. **Pembina Institute** (https://www.pembina.org/all) - 加拿大彭比纳研究所报告
+2. **EEB** (https://eeb.org/en/library/) - 欧洲环境署图书馆（自动处理Cookie弹窗）
+3. **Green Alliance** (https://green-alliance.org.uk/) - 英国绿色联盟智库报告
+4. **Pembina Institute** (https://www.pembina.org/all) - 加拿大彭比纳研究所报告
+5. **Ecotrust** (https://ecotrust.org/stories-news/publications-reports/) - 生态信托基金会报告
+6. **Nature Conservancy** (https://www.nature.org/en-us/what-we-do/our-insights/reports/) - 自然保护协会洞察报告
+7. **IISD** (https://www.iisd.org/publications) - 国际可持续发展研究所出版物
+8. **Ecologic Institute** (https://www.ecologic.eu/publications) - 生态研究所出版物
+9. **IEEP** (https://ieep.eu/publications/) - 欧洲环境政策研究所出版物
+10. **IUCN** (https://iucn.org/press-releases) - 国际自然保护联盟新闻稿
+11. **Stockholm Resilience** (https://www.stockholmresilience.org/publications.html) - 斯德哥尔摩韧性中心出版物
+12. **Biodiversity Council** (https://biodiversitycouncil.org.au/resources?category=Report) - 澳大利亚生物多样性委员会报告资源
+13. **Lincoln Institute** (https://www.lincolninst.edu/publications/policy-focus-reports-policy-briefs/) - 林肯土地政策研究所政策聚焦报告
 
 ### 2. 启用多网站监控
 
@@ -412,19 +420,27 @@ python monitor.py --multi --stats
 多网站监控统计信息
 ==================================================
 数据库文件: reports.db
-监控网站数量: 5
+监控网站数量: 13
 邮件通知: 启用
 --------------------------------------------------
-总报告数量: 35
-已发送报告: 30
-未发送报告: 5
+总报告数量: 66
+已发送报告: 60
+未发送报告: 6
 
 按网站统计:
   CONCITO: 10 个报告
-  WWF: 7 个报告
   EEB: 8 个报告
   Green Alliance: 6 个报告
   Pembina Institute: 4 个报告
+  Ecotrust: 6 个报告
+  Nature Conservancy: 4 个报告
+  IISD: 5 个报告
+  Ecologic Institute: 3 个报告
+  IEEP: 5 个报告
+  IUCN: 4 个报告
+  Stockholm Resilience: 4 个报告
+  Biodiversity Council: 3 个报告
+  Lincoln Institute: 4 个报告
 
 最近5个报告:
 1. [✓] [CONCITO] 报告标题1
@@ -439,6 +455,7 @@ python monitor.py --multi --stats
 2. **JavaScript渲染**：某些网站可能需要JavaScript渲染（当前版本不支持）
 3. **请求频率**：避免过于频繁的请求，尊重网站的robots.txt
 4. **错误处理**：单个网站失败不会影响其他网站的监控
+5. **网站访问限制**：部分网站可能有反爬虫措施或访问限制，返回HTTP 403错误。若遇到此类问题，可能需要配置代理、添加请求头或联系网站管理员获取访问权限。
 
 ## Web界面管理
 
@@ -519,7 +536,7 @@ Web界面提供了以下API接口：
 #### 7.2 监控配置
 - **自动启动**：如果上次关闭时监控处于运行状态，重启Web服务后会自动启动监控
 - **检查间隔**：可动态调整，调整后立即生效
-- **多网站支持**：默认监控5个智库网站，可在`website_configs.py`中添加更多网站
+- **多网站支持**：默认监控13个智库网站，可在`website_configs.py`中添加更多网站
 
 #### 7.3 数据库配置
 - 配置文件：`reports.db`（默认）
