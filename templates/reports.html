@@ -163,14 +163,35 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-success text-white">
-                <i class="fas fa-tasks me-2"></i>批量操作
+                <i class="fas fa-filter me-2"></i>筛选与操作
             </div>
             <div class="card-body">
                 <div class="alert alert-light">
-                    <p class="mb-2"><strong>批量邮件发送：</strong></p>
-                    <p class="small mb-3">可以批量发送未发送的报告邮件，避免遗漏通知。</p>
+                    <p class="mb-2"><strong>筛选选项：</strong></p>
+                    <p class="small mb-3">可以根据发现时间范围筛选报告，查看特定时间段内的内容。</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small">时间范围筛选</label>
+                        <div class="input-group">
+                            <input type="date" id="start-date" class="form-control form-control-sm" placeholder="开始日期">
+                            <span class="input-group-text">至</span>
+                            <input type="date" id="end-date" class="form-control form-control-sm" placeholder="结束日期">
+                        </div>
+                    </div>
                     
                     <div class="d-grid gap-2">
+                        <button id="filter-date-btn" class="btn btn-primary">
+                            <i class="fas fa-filter me-2"></i>按日期筛选
+                        </button>
+                        
+                        <button id="reset-filter-btn" class="btn btn-outline-secondary">
+                            <i class="fas fa-redo me-2"></i>重置筛选
+                        </button>
+                        
+                        <button id="export-csv-filter-btn" class="btn btn-warning">
+                            <i class="fas fa-download me-2"></i>导出CSV
+                        </button>
+                        
                         <button id="send-all-unsent-btn" class="btn btn-warning">
                             <i class="fas fa-paper-plane me-2"></i>发送所有未发送报告
                         </button>
@@ -186,11 +207,13 @@
                 </div>
                 
                 <div class="mt-3">
-                    <h6>数据管理</h6>
+                    <h6>数据说明</h6>
                     <div class="small">
+                        <p><strong>报告来源：</strong>所有监控的智库网站</p>
+                        <p><strong>时间范围：</strong>显示最新 {{ limit }} 条报告</p>
+                        <p><strong>更新时间：</strong> <span id="last-update-time">--:--:--</span></p>
+                        <p><strong>数据总量：</strong>数据库中共有 <span id="total-in-db">0</span> 条报告记录</p>
                         <p><strong>数据库文件：</strong> <code id="db-path">reports.db</code></p>
-                        <p><strong>最后更新：</strong> <span id="last-report-time">--:--:--</span></p>
-                        <p><strong>报告时间范围：</strong> <span id="report-time-range">-- 至 --</span></p>
                     </div>
                 </div>
             </div>
@@ -454,6 +477,85 @@
                 }
             });
         }, 60000);
+        
+        // 筛选功能
+        $('#filter-date-btn').on('click', function() {
+            const startDate = $('#start-date').val();
+            const endDate = $('#end-date').val();
+            
+            if (!startDate && !endDate) {
+                alert('请至少输入一个日期范围');
+                return;
+            }
+            
+            // 构建筛选参数
+            let params = {};
+            if (startDate) params.start_date = startDate;
+            if (endDate) params.end_date = endDate;
+            
+            // 获取当前URL参数
+            const urlParams = new URLSearchParams(window.location.search);
+            const days = urlParams.get('days') || 30;
+            const limit = urlParams.get('limit') || 20;
+            
+            params.days = days;
+            params.limit = limit;
+            
+            // 加载筛选后的报告
+            loadReports(params);
+        });
+        
+        $('#reset-filter-btn').on('click', function() {
+            // 清空日期输入
+            $('#start-date').val('');
+            $('#end-date').val('');
+            
+            // 重置URL参数
+            const urlParams = new URLSearchParams(window.location.search);
+            const days = urlParams.get('days') || 30;
+            const limit = urlParams.get('limit') || 20;
+            
+            // 重新加载报告（无筛选）
+            loadReports({days: days, limit: limit});
+        });
+        
+        $('#export-csv-filter-btn').on('click', function() {
+            const startDate = $('#start-date').val();
+            const endDate = $('#end-date').val();
+            
+            // 构建导出URL
+            let exportUrl = '/api/export_reports?format=csv';
+            if (startDate) exportUrl += '&start_date=' + encodeURIComponent(startDate);
+            if (endDate) exportUrl += '&end_date=' + encodeURIComponent(endDate);
+            
+            // 触发下载
+            window.location.href = exportUrl;
+        });
+        
+        // 更新loadReports函数以支持筛选参数
+        function loadReports(params = {}) {
+            // 构建查询字符串
+            const queryString = new URLSearchParams(params).toString();
+            const url = '/api/reports' + (queryString ? '?' + queryString : '');
+            
+            $.get(url, function(response) {
+                if (response.success) {
+                    updateReportsTable(response.reports);
+                    updateReportStats(response.count, response.total_count);
+                } else {
+                    alert('加载报告失败: ' + response.error);
+                }
+            }).fail(function() {
+                alert('网络错误，请稍后重试');
+            });
+        }
+        
+        // 更新报告统计信息
+        function updateReportStats(count, totalCount) {
+            $('#report-count').text(count);
+            $('#total-in-db').text(totalCount);
+            $('#last-update-time').text(new Date().toLocaleTimeString());
+        }
     });
 </script>
 {% endblock %}

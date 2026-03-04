@@ -507,12 +507,14 @@ class MonitorService:
             
             return status
     
-    def get_recent_reports(self, limit: int = 20) -> List[Dict[str, Any]]:
+    def get_recent_reports(self, limit: int = 20, start_date: str = None, end_date: str = None) -> List[Dict[str, Any]]:
         """
         获取最近的报告
         
         Args:
             limit: 返回的报告数量限制
+            start_date: 开始日期（YYYY-MM-DD格式）
+            end_date: 结束日期（YYYY-MM-DD格式）
             
         Returns:
             List[Dict[str, Any]]: 报告列表
@@ -520,12 +522,35 @@ class MonitorService:
         try:
             with DatabaseManager(self.db_path) as db:
                 all_reports = db.get_all_reports()
+                
                 # 按发现时间降序排序
                 sorted_reports = sorted(
                     all_reports,
                     key=lambda x: x.get('discovered_time', ''),
                     reverse=True
                 )
+                
+                # 日期筛选
+                if start_date or end_date:
+                    filtered_reports = []
+                    for report in sorted_reports:
+                        discovered_time = report.get('discovered_time', '')
+                        if not discovered_time:
+                            continue
+                        
+                        # 提取日期部分（假设格式为YYYY-MM-DD HH:MM:SS）
+                        report_date = discovered_time.split(' ')[0] if ' ' in discovered_time else discovered_time
+                        
+                        # 日期比较
+                        if start_date and report_date < start_date:
+                            continue
+                        if end_date and report_date > end_date:
+                            continue
+                            
+                        filtered_reports.append(report)
+                    
+                    sorted_reports = filtered_reports
+                
                 return sorted_reports[:limit]
                 
         except Exception as e:

@@ -17,6 +17,7 @@ except ImportError:
     logger.warning("flask_cors模块未安装，CORS支持已禁用")
 
 from monitor_service import get_monitor_service
+from db import DatabaseManager
 
 # 配置日志
 logging.basicConfig(
@@ -241,16 +242,27 @@ def api_get_reports():
     """获取报告数据API"""
     try:
         limit = request.args.get('limit', 20, type=int)
+        start_date = request.args.get('start_date', None, type=str)
+        end_date = request.args.get('end_date', None, type=str)
         
         if limit < 1 or limit > 100:
             limit = 20
             
-        reports = monitor_service.get_recent_reports(limit=limit)
+        reports = monitor_service.get_recent_reports(
+            limit=limit, 
+            start_date=start_date, 
+            end_date=end_date
+        )
+        
+        # 获取数据库总记录数
+        with DatabaseManager('reports.db') as db:
+            total_count = len(db.get_all_reports())
         
         return jsonify({
             'success': True,
             'reports': reports,
-            'count': len(reports)
+            'count': len(reports),
+            'total_count': total_count
         })
         
     except Exception as e:
@@ -412,24 +424,11 @@ def monitor_runs_page():
 
 @app.route('/tweets', methods=['GET'])
 def tweets_page():
-    """近期推文页面"""
-    try:
-        # 获取参数
-        days = request.args.get('days', 30, type=int)
-        limit = request.args.get('limit', 20, type=int)
-        
-        # 参数验证
-        if days < 1 or days > 365:
-            days = 30
-        if limit < 1 or limit > 100:
-            limit = 20
-        
-        # 获取最近推文
-        tweets = monitor_service.get_recent_tweets(days=days, limit=limit)
-        return render_template('tweets.html', tweets=tweets, days=days, limit=limit)
-    except Exception as e:
-        logger.error(f"近期推文页面加载失败: {e}")
-        return render_template('error.html', error=str(e)), 500
+    """近期推文页面（已迁移到报告查看页面）"""
+    # 重定向到报告查看页面，保持参数传递
+    days = request.args.get('days', 30, type=int)
+    limit = request.args.get('limit', 20, type=int)
+    return redirect(url_for('reports_page', days=days, limit=limit))
 
 @app.route('/api/smtp_config', methods=['GET'])
 def api_get_smtp_config():
