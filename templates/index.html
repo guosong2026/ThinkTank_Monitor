@@ -186,14 +186,12 @@
                         <thead>
                             <tr>
                                 <th>网站名称</th>
-                                <th>URL</th>
                                 <th>状态</th>
-                                <th>最后检查</th>
                             </tr>
                         </thead>
                         <tbody id="websites-table">
                             <tr>
-                                <td colspan="4" class="text-center">加载中...</td>
+                                <td colspan="2" class="text-center">加载中...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -220,29 +218,27 @@
             // 这里可以扩展为从API获取每个网站的详细状态
             // 目前只显示静态信息
             const websites = [
-                {name: "CONCITO", url: "https://concito.dk/en/analyser", status: "正常"},
-                {name: "EEB", url: "https://eeb.org/en/library/", status: "正常"},
+                {name: "CONCITO", url: "https://concito.dk/", status: "正常"},
+                {name: "EEB", url: "https://eeb.org/", status: "正常"},
                 {name: "Green Alliance", url: "https://green-alliance.org.uk", status: "正常"},
-                {name: "Pembina Institute", url: "https://www.pembina.org/all", status: "正常"},
-                {name: "Ecotrust", url: "https://ecotrust.org/stories-news/publications-reports/", status: "正常"},
-                {name: "Nature Conservancy", url: "https://www.nature.org/en-us/what-we-do/our-insights/reports/", status: "正常"},
-                {name: "IISD", url: "https://www.iisd.org/publications", status: "正常"},
-                {name: "Ecologic Institute", url: "https://www.ecologic.eu/publications", status: "正常"},
-                {name: "IEEP", url: "https://ieep.eu/publications/", status: "正常"},
-                {name: "IUCN", url: "https://iucn.org/press-releases", status: "正常"},
-                {name: "Stockholm Resilience", url: "https://www.stockholmresilience.org/publications.html", status: "正常"},
-                {name: "Biodiversity Council", url: "https://biodiversitycouncil.org.au/resources?category=Report", status: "正常"},
-                {name: "Lincoln Institute", url: "https://www.lincolninst.edu/publications/policy-focus-reports-policy-briefs/", status: "正常"}
+                {name: "Pembina Institute", url: "https://www.pembina.org/", status: "正常"},
+                {name: "Ecotrust", url: "https://ecotrust.org/", status: "正常"},
+                {name: "Nature Conservancy", url: "https://www.nature.org/", status: "正常"},
+                {name: "IISD", url: "https://www.iisd.org/", status: "正常"},
+                {name: "Ecologic Institute", url: "https://www.ecologic.eu/", status: "正常"},
+                {name: "IEEP", url: "https://ieep.eu/", status: "正常"},
+                {name: "IUCN", url: "https://iucn.org/", status: "正常"},
+                {name: "Stockholm Resilience", url: "https://www.stockholmresilience.org/", status: "正常"},
+                {name: "Biodiversity Council", url: "https://biodiversitycouncil.org.au/", status: "正常"},
+                {name: "Lincoln Institute", url: "https://www.lincolninst.edu/", status: "正常"}
             ];
             
             let html = '';
             websites.forEach(site => {
                 html += `
                 <tr>
-                    <td><strong>${site.name}</strong></td>
-                    <td><a href="${site.url}" target="_blank">${site.url}</a></td>
+                    <td><strong><a href="${site.url}" target="_blank" class="text-decoration-none">${site.name}</a></strong></td>
                     <td><span class="badge bg-success">${site.status}</span></td>
-                    <td><span class="text-muted">--:--:--</span></td>
                 </tr>
                 `;
             });
