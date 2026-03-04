@@ -163,22 +163,13 @@
                 <div id="recent-activity">
                     <p class="text-muted">加载中...</p>
                 </div>
+                <div class="text-end mt-2">
+                    <a href="/reports" class="btn btn-sm btn-outline-info">查看最近推文</a>
+                </div>
             </div>
         </div>
         
-        <div class="card mt-4">
-            <div class="card-header bg-warning text-white">
-                <i class="fas fa-newspaper me-2"></i>近期推文
-            </div>
-            <div class="card-body">
-                <div id="recent-tweets">
-                    <p class="text-muted">加载中...</p>
-                </div>
-                <div class="text-end mt-2">
-                    <a href="/tweets" class="btn btn-sm btn-outline-warning">查看更多推文</a>
-                </div>
-            </div>
-        </div>
+
     </div>
 </div>
 
@@ -284,53 +275,12 @@
             });
         }
         
-        // 更新近期推文
-        function updateRecentTweets() {
-            $.get('/api/recent_tweets?days=30&limit=5', function(response) {
-                if (response.success && response.tweets.length > 0) {
-                    let html = '';
-                    response.tweets.forEach(tweet => {
-                        const title = tweet.title.length > 30 ? tweet.title.substring(0, 30) + '...' : tweet.title;
-                        
-                        // 格式化发布时间
-                        let publishTime = '未知时间';
-                        if (tweet.publish_date_parsed) {
-                            // 处理日期格式
-                            const dateStr = tweet.publish_date_parsed;
-                            if (typeof dateStr === 'string') {
-                                publishTime = dateStr.substring(0, 16).replace('T', ' ');
-                            } else {
-                                // 假设是ISO格式字符串
-                                publishTime = new Date(dateStr).toISOString().substring(0, 16).replace('T', ' ');
-                            }
-                        } else if (tweet.publish_date) {
-                            publishTime = tweet.publish_date.substring(0, 16);
-                        }
-                        
-                        html += `
-                        <div class="mb-2">
-                            <div class="small">${publishTime}</div>
-                            <div class="fw-bold">
-                                <a href="${tweet.url}" target="_blank" class="text-decoration-none">${title}</a>
-                            </div>
-                            <div class="small text-muted">来源: ${tweet.source_website || '未知'}</div>
-                        </div>
-                        <hr class="my-2">
-                        `;
-                    });
-                    
-                    $('#recent-tweets').html(html);
-                } else {
-                    $('#recent-tweets').html('<p class="text-muted">暂无近期推文</p>');
-                }
-            });
-        }
+
         
         // 初始化
         updateLastUpdateTime();
         updateWebsitesTable();
         updateRecentActivity();
-        updateRecentTweets();
         
         // 刷新按钮
         $('#refresh-btn').click(function() {
@@ -427,8 +377,6 @@
                     
                     // 更新最近活动
                     updateRecentActivity();
-                    // 更新近期推文
-                    updateRecentTweets();
                 }
             });
         }, 30000);
