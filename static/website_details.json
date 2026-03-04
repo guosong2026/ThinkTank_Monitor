@@ -1,0 +1,69 @@
+{
+  "websites": [
+    {
+      "name": "CONCITO",
+      "domain": "气候政策与绿色转型",
+      "description": "CONCITO是丹麦领先的绿色智库，专注于气候政策、能源转型和可持续发展研究。成立于2008年，为政府、企业和公众提供基于科学的气候解决方案和政策建议。"
+    },
+    {
+      "name": "EEB",
+      "domain": "欧洲环境政策",
+      "description": "欧洲环境署（EEB）是欧洲最大的环境公民社会组织网络，汇集了180多个成员组织。致力于推动欧盟环境政策的制定与实施，关注气候变化、生物多样性、循环经济等议题。"
+    },
+    {
+      "name": "Green Alliance",
+      "domain": "英国环境政策",
+      "description": "绿色联盟（Green Alliance）是英国领先的环境政策智库，成立于1979年。专注于气候变化、资源效率、自然保护等领域，通过研究、分析和倡导推动英国环境政策的进步。"
+    },
+    {
+      "name": "Pembina Institute",
+      "domain": "加拿大能源与环境",
+      "description": "彭比纳研究所（Pembina Institute）是加拿大领先的能源与环境智库，成立于1985年。专注于清洁能源、气候变化、可持续交通等领域，提供基于研究的政策解决方案。"
+    },
+    {
+      "name": "Ecotrust",
+      "domain": "生态保护与社区发展",
+      "description": "生态信托基金会（Ecotrust）是美国西北部领先的环保组织，成立于1991年。致力于通过市场解决方案推动生态保护、社区发展和气候适应，重点关注森林、渔业和农业系统。"
+    },
+    {
+      "name": "Nature Conservancy",
+      "domain": "自然保护与气候变化",
+      "description": "自然保护协会（The Nature Conservancy）是全球最大的自然保护组织之一，成立于1951年。通过科学保护、政策倡导和社区合作，致力于保护陆地和水域，应对气候变化挑战。"
+    },
+    {
+      "name": "IISD",
+      "domain": "国际可持续发展",
+      "description": "国际可持续发展研究所（IISD）是加拿大领先的可持续发展智库，成立于1990年。专注于环境、经济和社会可持续性的交叉领域，为全球政策制定提供研究和分析支持。"
+    },
+    {
+      "name": "Ecologic Institute",
+      "domain": "欧洲环境研究",
+      "description": "生态研究所（Ecologic Institute）是德国和欧洲领先的环境政策研究机构，成立于1995年。专注于气候变化、水资源、生物多样性等领域，为欧盟和德国政府提供政策建议。"
+    },
+    {
+      "name": "IEEP",
+      "domain": "欧洲环境政策研究",
+      "description": "欧洲环境政策研究所（IEEP）是欧洲领先的环境政策智库，成立于1976年。为欧盟机构和成员国政府提供独立的环境政策研究、评估和建议，推动欧洲绿色转型。"
+    },
+    {
+      "name": "IUCN",
+      "domain": "全球自然保护",
+      "description": "国际自然保护联盟（IUCN）是全球最大的自然保护网络，成立于1948年。汇集了政府机构、非政府组织和专家，致力于自然保护和生物多样性保护的全球标准制定与实施。"
+    },
+    {
+      "name": "Stockholm Resilience",
+      "domain": "韧性科学与可持续性",
+      "description": "斯德哥尔摩韧性中心（Stockholm Resilience Centre）是瑞典领先的可持续性研究机构，成立于2007年。专注于行星边界、社会生态韧性、地球系统治理等前沿研究领域。"
+    },
+    {
+      "name": "Biodiversity Council",
+      "domain": "澳大利亚生物多样性",
+      "description": "澳大利亚生物多样性委员会（Biodiversity Council）是澳大利亚领先的生物多样性保护机构，汇集了顶尖科学家和专家。致力于通过科学研究和政策倡导保护澳大利亚独特的生物多样性。"
+    },
+    {
+      "name": "Lincoln Institute",
+      "domain": "土地政策与城市规划",
+      "description": "林肯土地政策研究所（Lincoln Institute of Land Policy）是美国领先的土地政策研究机构，成立于1974年。专注于土地价值、财产税、城市规划和可持续发展等研究领域。"
+    }
+  ]
+}

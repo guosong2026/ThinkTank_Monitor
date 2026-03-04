@@ -186,12 +186,14 @@
                         <thead>
                             <tr>
                                 <th>网站名称</th>
+                                <th>领域</th>
                                 <th>状态</th>
+                                <th>操作</th>
                             </tr>
                         </thead>
                         <tbody id="websites-table">
                             <tr>
-                                <td colspan="2" class="text-center">加载中...</td>
+                                <td colspan="4" class="text-center">加载中...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -200,6 +202,46 @@
         </div>
     </div>
 </div>
+
+<!-- 智库详情模态框 -->
+<div class="modal fade" id="thinktankModal" tabindex="-1" aria-labelledby="thinktankModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="thinktankModalLabel">智库详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <h4 id="modal-thinktank-name" class="mb-3"></h4>
+                        <div class="mb-3">
+                            <strong>核心领域：</strong>
+                            <span id="modal-thinktank-domain" class="badge bg-primary"></span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>网站链接：</strong>
+                            <a id="modal-thinktank-url" href="#" target="_blank" class="text-decoration-none"></a>
+                        </div>
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <strong>关于此智库</strong>
+                            </div>
+                            <div class="card-body">
+                                <p id="modal-thinktank-description" class="mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <a id="modal-thinktank-visit-btn" href="#" target="_blank" class="btn btn-primary">访问网站</a>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -215,9 +257,8 @@
         
         // 更新网站列表
         function updateWebsitesTable() {
-            // 这里可以扩展为从API获取每个网站的详细状态
-            // 目前只显示静态信息
-            const websites = [
+            // 基础网站信息（URL和状态）
+            const baseWebsites = [
                 {name: "CONCITO", url: "https://concito.dk/", status: "正常"},
                 {name: "EEB", url: "https://eeb.org/", status: "正常"},
                 {name: "Green Alliance", url: "https://green-alliance.org.uk", status: "正常"},
@@ -233,17 +274,82 @@
                 {name: "Lincoln Institute", url: "https://www.lincolninst.edu/", status: "正常"}
             ];
             
-            let html = '';
-            websites.forEach(site => {
-                html += `
-                <tr>
-                    <td><strong><a href="${site.url}" target="_blank" class="text-decoration-none">${site.name}</a></strong></td>
-                    <td><span class="badge bg-success">${site.status}</span></td>
-                </tr>
-                `;
+            // 加载智库详细信息
+            $.getJSON('/static/website_details.json', function(detailsData) {
+                // 创建名称到详细信息的映射
+                const detailsMap = {};
+                if (detailsData && detailsData.websites) {
+                    detailsData.websites.forEach(detail => {
+                        detailsMap[detail.name] = {
+                            domain: detail.domain || '未设置',
+                            description: detail.description || '暂无描述'
+                        };
+                    });
+                }
+                
+                // 合并数据并生成表格
+                let html = '';
+                baseWebsites.forEach(site => {
+                    const details = detailsMap[site.name] || {domain: '未设置', description: '暂无描述'};
+                    
+                    html += `
+                    <tr>
+                        <td><strong><a href="${site.url}" target="_blank" class="text-decoration-none">${site.name}</a></strong></td>
+                        <td><span class="badge bg-info">${details.domain}</span></td>
+                        <td><span class="badge bg-success">${site.status}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary thinktank-detail-btn" 
+                                    data-name="${site.name}"
+                                    data-url="${site.url}"
+                                    data-domain="${details.domain}"
+                                    data-description="${details.description.replace(/"/g, '&quot;')}">
+                                <i class="fas fa-info-circle me-1"></i>关于此智库
+                            </button>
+                        </td>
+                    </tr>
+                    `;
+                });
+                
+                $('#websites-table').html(html);
+                
+                // 绑定按钮点击事件
+                $('.thinktank-detail-btn').click(function() {
+                    const name = $(this).data('name');
+                    const url = $(this).data('url');
+                    const domain = $(this).data('domain');
+                    const description = $(this).data('description');
+                    
+                    // 更新模态框内容
+                    $('#modal-thinktank-name').text(name);
+                    $('#modal-thinktank-domain').text(domain);
+                    $('#modal-thinktank-url').attr('href', url).text(url);
+                    $('#modal-thinktank-description').text(description);
+                    $('#modal-thinktank-visit-btn').attr('href', url);
+                    
+                    // 显示模态框
+                    const modal = new bootstrap.Modal(document.getElementById('thinktankModal'));
+                    modal.show();
+                });
+                
+            }).fail(function() {
+                // 如果加载失败，使用基础信息
+                let html = '';
+                baseWebsites.forEach(site => {
+                    html += `
+                    <tr>
+                        <td><strong><a href="${site.url}" target="_blank" class="text-decoration-none">${site.name}</a></strong></td>
+                        <td><span class="badge bg-secondary">未加载</span></td>
+                        <td><span class="badge bg-success">${site.status}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-secondary" disabled>
+                                <i class="fas fa-info-circle me-1"></i>信息加载失败
+                            </button>
+                        </td>
+                    </tr>
+                    `;
+                });
+                $('#websites-table').html(html);
             });
-            
-            $('#websites-table').html(html);
         }
         
         // 更新最近活动
