@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ThinkTank Monitor - {% block title %}{% endblock %}</title>
+    <title>绿色智库前沿进展追踪系统 - {% block title %}{% endblock %}</title>
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -82,7 +82,7 @@
         <nav class="navbar navbar-expand-lg navbar-light bg-white rounded shadow-sm mb-4">
             <div class="container-fluid">
                 <a class="navbar-brand" href="/">
-                    <i class="fas fa-search me-2"></i>ThinkTank Monitor
+                    <i class="fas fa-search me-2"></i>绿色智库前沿进展追踪系统
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
@@ -110,6 +110,11 @@
                                 <i class="fas fa-cog me-1"></i>邮箱设置
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#aboutModal">
+                                <i class="fas fa-info-circle me-1"></i>关于
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -120,12 +125,48 @@
             {% block content %}{% endblock %}
         </main>
         
+        <!-- 关于系统模态框 -->
+        <div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="aboutModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="aboutModalLabel">
+                            <i class="fas fa-info-circle me-2"></i>关于绿色智库前沿进展追踪系统
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <p>本系统旨在实时追踪、收集全球绿色智库的前沿进展，并将智库的最近出版物推送给用户，帮助您第一时间了解自然资源管理领域的国际动态。</p>
+                        </div>
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <strong>主要功能</strong>
+                            </div>
+                            <div class="card-body">
+                                <ul class="mb-0">
+                                    <li>监控全球13个领先的绿色智库网站</li>
+                                    <li>自动抓取最新研究报告和出版物</li>
+                                    <li>邮件推送新发现的报告给用户</li>
+                                    <li>支持CSV格式导出报告数据</li>
+                                    <li>查看智库详细信息和核心研究领域</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">确定</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- 页脚 -->
         <footer>
             <div class="row">
                 <div class="col-md-12">
                     <p class="mb-0">
-                        ThinkTank Monitor v1.0 &copy; 2024 |
+                        绿色智库前沿进展追踪系统 v1.0 &copy; 2024 |
                         监控 <span id="website-count">5</span> 个智库网站 |
                         数据库: <span id="db-file">reports.db</span>
                     </p>
