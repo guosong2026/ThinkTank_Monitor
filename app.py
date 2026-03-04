@@ -280,6 +280,49 @@ def api_get_reports():
         }), 500
 
 
+@app.route('/api/export_reports', methods=['GET'])
+def api_export_reports():
+    """导出报告数据API"""
+    try:
+        format = request.args.get('format', 'csv', type=str)
+        start_date = request.args.get('start_date', None, type=str)
+        end_date = request.args.get('end_date', None, type=str)
+        
+        # 验证格式
+        if format.lower() not in ['csv']:
+            return jsonify({
+                'success': False,
+                'error': f'不支持的导出格式: {format}'
+            }), 400
+        
+        # 调用导出方法
+        content, filename = monitor_service.export_reports(
+            format=format,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        # 返回文件下载响应
+        from flask import Response
+        response = Response(
+            content,
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'Content-Type': 'text/csv; charset=utf-8'
+            }
+        )
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"导出报告API失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route('/api/recent_tweets', methods=['GET'])
 def api_get_recent_tweets():
     """获取最近推文API"""

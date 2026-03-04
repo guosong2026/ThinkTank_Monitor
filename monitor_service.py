@@ -906,6 +906,79 @@ class MonitorService:
             except Exception as e:
                 logger.error(f"重新调度任务失败: {e}")
     
+    def export_reports(self, format: str = 'csv', start_date: str = None, end_date: str = None) -> tuple[str, str]:
+        """
+        导出报告为指定格式
+        
+        Args:
+            format: 导出格式，目前只支持'csv'
+            start_date: 开始日期（YYYY-MM-DD格式）
+            end_date: 结束日期（YYYY-MM-DD格式）
+            
+        Returns:
+            tuple[str, str]: (文件内容, 文件名)
+        """
+        try:
+            # 获取报告数据（使用大限制或不限制，因为这是导出操作）
+            reports = self.get_recent_reports(limit=10000, start_date=start_date, end_date=end_date)
+            
+            if format.lower() == 'csv':
+                # 生成CSV内容
+                csv_lines = []
+                
+                # CSV头部
+                headers = ['标题', '链接', '来源', '发布日期', '发现时间', '邮件状态']
+                csv_lines.append(','.join(headers))
+                
+                # 数据行
+                for report in reports:
+                    title = report.get('title', '')
+                    url = report.get('url', '')
+                    source = report.get('source_website', '')
+                    publish_date = report.get('publish_date', '')
+                    discovered_time = report.get('discovered_time', '')
+                    sent_status = '已发送' if report.get('sent_status') else '未发送'
+                    
+                    # 处理CSV特殊字符：将双引号替换为两个双引号，并用双引号包裹字段
+                    title_escaped = title.replace('"', '""')
+                    url_escaped = url.replace('"', '""')
+                    source_escaped = source.replace('"', '""')
+                    
+                    # 构建CSV行
+                    row = [
+                        f'"{title_escaped}"',
+                        f'"{url_escaped}"',
+                        f'"{source_escaped}"',
+                        f'"{publish_date}"',
+                        f'"{discovered_time}"',
+                        f'"{sent_status}"'
+                    ]
+                    csv_lines.append(','.join(row))
+                
+                csv_content = '\n'.join(csv_lines)
+                
+                # 生成文件名
+                date_range = ''
+                if start_date and end_date:
+                    date_range = f'_{start_date}_至_{end_date}'
+                elif start_date:
+                    date_range = f'_从_{start_date}'
+                elif end_date:
+                    date_range = f'_至_{end_date}'
+                
+                from datetime import datetime
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f'thinktank_reports{date_range}_{timestamp}.csv'
+                
+                return csv_content, filename
+                
+            else:
+                raise ValueError(f"不支持的导出格式: {format}")
+                
+        except Exception as e:
+            logger.error(f"导出报告失败: {e}")
+            raise
+    
     def shutdown(self):
         """关闭监控服务（清理资源）"""
         try:
