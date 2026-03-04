@@ -523,10 +523,22 @@ class MonitorService:
             with DatabaseManager(self.db_path) as db:
                 all_reports = db.get_all_reports()
                 
-                # 按发现时间降序排序
+                # 按发布日期降序排序，如果发布日期为空则按发现时间排序
+                def get_sort_key(report):
+                    # 优先使用发布日期
+                    publish_date = report.get('publish_date')
+                    if publish_date:
+                        return publish_date
+                    # 其次使用发现时间
+                    discovered_time = report.get('discovered_time', '')
+                    # 提取日期部分（如果包含时间）
+                    if ' ' in discovered_time:
+                        return discovered_time.split(' ')[0]
+                    return discovered_time
+                
                 sorted_reports = sorted(
                     all_reports,
-                    key=lambda x: x.get('discovered_time', ''),
+                    key=get_sort_key,
                     reverse=True
                 )
                 
@@ -534,17 +546,19 @@ class MonitorService:
                 if start_date or end_date:
                     filtered_reports = []
                     for report in sorted_reports:
-                        discovered_time = report.get('discovered_time', '')
-                        if not discovered_time:
-                            continue
-                        
-                        # 提取日期部分（假设格式为YYYY-MM-DD HH:MM:SS）
-                        report_date = discovered_time.split(' ')[0] if ' ' in discovered_time else discovered_time
+                        # 优先使用发布日期，其次使用发现时间
+                        date_str = report.get('publish_date')
+                        if not date_str:
+                            discovered_time = report.get('discovered_time', '')
+                            if not discovered_time:
+                                continue
+                            # 提取日期部分（假设格式为YYYY-MM-DD HH:MM:SS）
+                            date_str = discovered_time.split(' ')[0] if ' ' in discovered_time else discovered_time
                         
                         # 日期比较
-                        if start_date and report_date < start_date:
+                        if start_date and date_str < start_date:
                             continue
-                        if end_date and report_date > end_date:
+                        if end_date and date_str > end_date:
                             continue
                             
                         filtered_reports.append(report)

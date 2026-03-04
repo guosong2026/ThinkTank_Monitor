@@ -95,6 +95,50 @@ class WebsiteMonitor:
         domain = parsed.netloc
         return domain if domain else "unknown"
     
+    def _extract_date_from_title(self, title: str):
+        """
+        从标题中提取发布日期
+        
+        Args:
+            title: 报告标题
+            
+        Returns:
+            str: 提取到的日期字符串（YYYY-MM-DD格式），如果提取失败则返回None
+        """
+        import re
+        from datetime import datetime
+        
+        if not title:
+            return None
+        
+        # 常见日期模式
+        date_patterns = [
+            # 完整月份名称 + 日期 + 年份 (February 27, 2026)
+            (r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})', '%B %d, %Y'),
+            # 缩写月份名称 + 日期 + 年份 (Feb 27, 2026)
+            (r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),\s+(\d{4})', '%b %d, %Y'),
+            # YYYY-MM-DD 格式
+            (r'(\d{4})-(\d{1,2})-(\d{1,2})', '%Y-%m-%d'),
+            # MM/DD/YYYY 格式
+            (r'(\d{1,2})/(\d{1,2})/(\d{4})', '%m/%d/%Y'),
+            # DD/MM/YYYY 格式
+            (r'(\d{1,2})/(\d{1,2})/(\d{4})', '%d/%m/%Y'),
+        ]
+        
+        for pattern, date_format in date_patterns:
+            match = re.search(pattern, title, re.IGNORECASE)
+            if match:
+                try:
+                    # 提取匹配的日期字符串
+                    date_str = match.group(0)
+                    dt = datetime.strptime(date_str, date_format)
+                    return dt.strftime('%Y-%m-%d')
+                except (ValueError, AttributeError) as e:
+                    logger.debug(f"日期解析失败: {date_str}, 格式: {date_format}, 错误: {e}")
+                    continue
+        
+        return None
+    
     def run_once(self) -> int:
         """
         执行单次监控检查
@@ -126,11 +170,13 @@ class WebsiteMonitor:
                     url = report['url']
                     
                     # 尝试插入数据库
+                    # 尝试从标题中提取发布日期
+                    publish_date = self._extract_date_from_title(title)
                     report_id = db.insert_report(
                         title=title,
                         url=url,
                         source_website=self.source_website,
-                        publish_date=None  # 发布日期可能需要从页面中进一步提取
+                        publish_date=publish_date
                     )
                     
                     if report_id:
@@ -462,6 +508,50 @@ class MultiWebsiteMonitor:
         
         return None
     
+    def _extract_date_from_title(self, title: str):
+        """
+        从标题中提取发布日期
+        
+        Args:
+            title: 报告标题
+            
+        Returns:
+            str: 提取到的日期字符串（YYYY-MM-DD格式），如果提取失败则返回None
+        """
+        import re
+        from datetime import datetime
+        
+        if not title:
+            return None
+        
+        # 常见日期模式
+        date_patterns = [
+            # 完整月份名称 + 日期 + 年份 (February 27, 2026)
+            (r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})', '%B %d, %Y'),
+            # 缩写月份名称 + 日期 + 年份 (Feb 27, 2026)
+            (r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),\s+(\d{4})', '%b %d, %Y'),
+            # YYYY-MM-DD 格式
+            (r'(\d{4})-(\d{1,2})-(\d{1,2})', '%Y-%m-%d'),
+            # MM/DD/YYYY 格式
+            (r'(\d{1,2})/(\d{1,2})/(\d{4})', '%m/%d/%Y'),
+            # DD/MM/YYYY 格式
+            (r'(\d{1,2})/(\d{1,2})/(\d{4})', '%d/%m/%Y'),
+        ]
+        
+        for pattern, date_format in date_patterns:
+            match = re.search(pattern, title, re.IGNORECASE)
+            if match:
+                try:
+                    # 提取匹配的日期字符串
+                    date_str = match.group(0)
+                    dt = datetime.strptime(date_str, date_format)
+                    return dt.strftime('%Y-%m-%d')
+                except (ValueError, AttributeError) as e:
+                    logger.debug(f"日期解析失败: {date_str}, 格式: {date_format}, 错误: {e}")
+                    continue
+        
+        return None
+    
     def run_once(self) -> Dict[str, int]:
         """
         执行单次监控检查（所有网站）
@@ -518,11 +608,13 @@ class MultiWebsiteMonitor:
                     source = report.get('source', config.name)
                     
                     # 插入数据库
+                    # 尝试从标题中提取发布日期
+                    publish_date = self._extract_date_from_title(title)
                     report_id = db.insert_report(
                         title=title,
                         url=url,
                         source_website=source,
-                        publish_date=None
+                        publish_date=publish_date
                     )
                     
                     if report_id:
