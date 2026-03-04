@@ -139,10 +139,13 @@ class WebsiteMonitor:
         
         return None
     
-    def run_once(self) -> int:
+    def run_once(self, send_email: bool = True) -> int:
         """
         执行单次监控检查
         
+        Args:
+            send_email: 是否发送邮件通知（默认True）
+            
         Returns:
             int: 发现的新报告数量
         """
@@ -184,8 +187,8 @@ class WebsiteMonitor:
                         # 在控制台打印发现的新报告
                         print(f"发现新报告：{title} - {url}")
                         
-                        # 发送邮件通知（如果启用）
-                        if self.enable_email and self.email_sender:
+                        # 发送邮件通知（如果启用且允许发送邮件）
+                        if send_email and self.enable_email and self.email_sender:
                             try:
                                 email_success = self.email_sender.send_report_notification(
                                     title=title,
@@ -238,7 +241,7 @@ class WebsiteMonitor:
                 print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 第 {run_count} 次检查...")
                 
                 # 执行单次检查
-                new_reports = self.run_once()
+                new_reports = self.run_once(send_email=True)
                 
                 if new_reports > 0:
                     print(f"本次检查发现 {new_reports} 个新报告")
@@ -552,10 +555,13 @@ class MultiWebsiteMonitor:
         
         return None
     
-    def run_once(self) -> Dict[str, int]:
+    def run_once(self, send_email: bool = True) -> Dict[str, int]:
         """
         执行单次监控检查（所有网站）
         
+        Args:
+            send_email: 是否发送邮件通知（默认True）
+            
         Returns:
             Dict[str, int]: 每个网站发现的新报告数量
         """
@@ -564,19 +570,20 @@ class MultiWebsiteMonitor:
         
         for config in self.website_configs:
             logger.info(f"检查网站: {config.name} ({config.url})")
-            new_reports = self._check_single_website(config)
+            new_reports = self._check_single_website(config, send_email)
             results[config.name] = new_reports
             total_new_reports += new_reports
         
         logger.info(f"所有网站检查完成，共发现 {total_new_reports} 个新报告")
         return results
     
-    def _check_single_website(self, config: WebsiteConfig) -> int:
+    def _check_single_website(self, config: WebsiteConfig, send_email: bool = True) -> int:
         """
         检查单个网站
         
         Args:
             config: 网站配置
+            send_email: 是否发送邮件通知（默认True）
             
         Returns:
             int: 发现的新报告数量
@@ -622,8 +629,8 @@ class MultiWebsiteMonitor:
                         # 在控制台打印发现的新报告
                         print(f"发现新报告 [{config.name}]：{title} - {url}")
                         
-                        # 发送邮件通知（如果启用）
-                        if self.enable_email and self.email_sender:
+                        # 发送邮件通知（如果启用且允许发送邮件）
+                        if send_email and self.enable_email and self.email_sender:
                             try:
                                 email_success = self.email_sender.send_report_notification(
                                     title=title,
@@ -673,7 +680,7 @@ class MultiWebsiteMonitor:
                 print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 第 {run_count} 次检查...")
                 
                 # 执行单次检查
-                results = self.run_once()
+                results = self.run_once(send_email=True)
                 
                 # 打印结果摘要
                 total_new = sum(results.values())

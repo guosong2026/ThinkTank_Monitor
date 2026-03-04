@@ -121,7 +121,14 @@ def api_stop():
 def api_run_once():
     """运行单次检查API"""
     try:
-        results = monitor_service.run_once()
+        # 从请求中获取send_email参数，默认为False（近期报告抓取不发送邮件）
+        send_email = False
+        if request.is_json:
+            data = request.get_json()
+            if data and 'send_email' in data:
+                send_email = bool(data['send_email'])
+        
+        results = monitor_service.run_once(send_email=send_email)
         
         if results:
             return jsonify({
@@ -449,8 +456,8 @@ def trigger_check():
     try:
         logger.info("触发监控检查接口被调用")
         
-        # 运行监控检查
-        results = monitor_service.run_once()
+        # 运行监控检查（外部cron调用应发送邮件）
+        results = monitor_service.run_once(send_email=True)
         
         # 统计结果
         checked_sites = len(results) if results else 0

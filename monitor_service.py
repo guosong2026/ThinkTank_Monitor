@@ -149,10 +149,13 @@ class MonitorService:
             logger.error(f"创建监控器失败: {e}")
             return None
     
-    def run_once(self) -> Dict[str, int]:
+    def run_once(self, send_email: bool = True) -> Dict[str, int]:
         """
         运行单次监控检查
         
+        Args:
+            send_email: 是否发送邮件通知（默认True）
+            
         Returns:
             Dict[str, int]: 每个网站发现的新报告数量
         """
@@ -173,7 +176,7 @@ class MonitorService:
         
         try:
             logger.info("开始单次监控检查")
-            results = self.monitor.run_once()
+            results = self.monitor.run_once(send_email=send_email)
             new_reports_count = sum(results.values())
             logger.info(f"单次监控检查完成: {results}")
             
@@ -204,6 +207,12 @@ class MonitorService:
             logger.error(f"保存监控运行记录失败: {e}")
         
         return results
+    
+    def _run_once_with_email(self) -> Dict[str, int]:
+        """
+        包装方法，用于调度任务，始终发送邮件
+        """
+        return self.run_once(send_email=True)
     
     def send_test_email(self) -> Dict[str, Any]:
         """
@@ -399,7 +408,7 @@ class MonitorService:
                 # 添加调度任务
                 trigger = IntervalTrigger(seconds=check_interval_seconds)
                 self.scheduler.add_job(
-                    func=self.run_once,
+                    func=self._run_once_with_email,
                     trigger=trigger,
                     id=self.job_id,
                     name="网站监控任务",
@@ -416,7 +425,7 @@ class MonitorService:
                 
                 # 立即运行一次检查
                 self.scheduler.add_job(
-                    func=self.run_once,
+                    func=self._run_once_with_email,
                     trigger='date',
                     run_date=datetime.now(),
                     id=f"{self.job_id}_initial",
@@ -884,7 +893,7 @@ class MonitorService:
                 # 添加新任务
                 trigger = IntervalTrigger(seconds=check_interval_seconds)
                 self.scheduler.add_job(
-                    func=self.run_once,
+                    func=self._run_once_with_email,
                     trigger=trigger,
                     id=self.job_id,
                     name="网站监控任务",

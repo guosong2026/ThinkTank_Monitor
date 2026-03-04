@@ -348,20 +348,23 @@
             window.location.href = '/reports?limit=' + limit;
         });
         
-        // 发送单个报告邮件按钮
+        // 发送单个报告邮件按钮（实际发送所有未发送报告）
         $('.send-email-btn').click(function() {
             const reportId = $(this).data('id');
             const $btn = $(this);
             
+            if (!confirm('注意：此操作将发送所有未发送的报告邮件，而不仅仅是当前报告。确定要继续吗？')) {
+                return;
+            }
+            
             $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
             
-            // 这里可以调用专门的发送邮件API
-            // 目前使用单次检查，它会发送所有新报告的邮件
-            $.post('/api/run_once', function(response) {
+            // 发送所有未发送报告
+            $.post('/api/send_unsent', function(response) {
                 $btn.prop('disabled', false).html('<i class="fas fa-paper-plane"></i>');
                 
                 if (response.success) {
-                    alert('邮件发送请求已提交。系统将在下次检查时发送邮件。');
+                    alert(response.message);
                     // 刷新页面更新状态
                     setTimeout(() => location.reload(), 1000);
                 } else {
