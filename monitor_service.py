@@ -527,14 +527,23 @@ class MonitorService:
                 def get_sort_key(report):
                     # 优先使用发布日期
                     publish_date = report.get('publish_date')
-                    if publish_date:
+                    if publish_date and publish_date != 'None':
                         return publish_date
                     # 其次使用发现时间
                     discovered_time = report.get('discovered_time', '')
-                    # 提取日期部分（如果包含时间）
-                    if ' ' in discovered_time:
+                    # 提取日期部分（处理多种格式）
+                    if not discovered_time:
+                        return ''
+                    
+                    # 处理ISO格式: 2026-02-28T15:01:17.198158
+                    if 'T' in discovered_time:
+                        return discovered_time.split('T')[0]
+                    # 处理空格分隔格式: YYYY-MM-DD HH:MM:SS
+                    elif ' ' in discovered_time:
                         return discovered_time.split(' ')[0]
-                    return discovered_time
+                    # 其他格式直接返回
+                    else:
+                        return discovered_time
                 
                 sorted_reports = sorted(
                     all_reports,
@@ -548,12 +557,17 @@ class MonitorService:
                     for report in sorted_reports:
                         # 优先使用发布日期，其次使用发现时间
                         date_str = report.get('publish_date')
-                        if not date_str:
+                        if not date_str or date_str == 'None':
                             discovered_time = report.get('discovered_time', '')
                             if not discovered_time:
                                 continue
-                            # 提取日期部分（假设格式为YYYY-MM-DD HH:MM:SS）
-                            date_str = discovered_time.split(' ')[0] if ' ' in discovered_time else discovered_time
+                            # 提取日期部分（处理多种格式，与get_sort_key一致）
+                            if 'T' in discovered_time:
+                                date_str = discovered_time.split('T')[0]
+                            elif ' ' in discovered_time:
+                                date_str = discovered_time.split(' ')[0]
+                            else:
+                                date_str = discovered_time
                         
                         # 日期比较
                         if start_date and date_str < start_date:
