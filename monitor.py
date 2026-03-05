@@ -184,8 +184,8 @@ class WebsiteMonitor:
                     
                     if report_id:
                         new_reports_count += 1
-                        # 在控制台打印发现的新报告
-                        print(f"发现新报告：{title} - {url}")
+                        # 记录发现的新报告
+                        logger.debug(f"发现新报告：{title} - {url}")
                         
                         # 发送邮件通知（如果启用且允许发送邮件）
                         if send_email and self.enable_email and self.email_sender:
@@ -244,15 +244,15 @@ class WebsiteMonitor:
                 new_reports = self.run_once(send_email=True)
                 
                 if new_reports > 0:
-                    print(f"本次检查发现 {new_reports} 个新报告")
+                    logger.info(f"本次检查发现 {new_reports} 个新报告")
                 else:
-                    print("本次检查未发现新报告")
+                    logger.debug("本次检查未发现新报告")
                 
                 # 如果不是最后一次运行，则等待
                 if max_runs is None or run_count < max_runs:
                     next_check_time = datetime.now() + timedelta(seconds=self.check_interval_seconds)
-                    print(f"下次检查时间: {next_check_time.strftime('%Y-%m-%d %H:%M:%S')}")
-                    print(f"等待 {self.check_interval_seconds/3600:.1f} 小时...")
+                    logger.debug(f"下次检查时间: {next_check_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                    logger.debug(f"等待 {self.check_interval_seconds/3600:.1f} 小时...")
                     
                     # 等待间隔时间，但允许被中断
                     self._wait_with_interrupt(self.check_interval_seconds)
@@ -474,8 +474,8 @@ class MultiWebsiteMonitor:
             additional_headers['Referer'] = 'https://www.worldwildlife.org/'
             additional_headers['Origin'] = 'https://www.worldwildlife.org'
         
-        max_retries = 3
-        base_delay = 2  # 初始延迟秒数
+        max_retries = 2
+        base_delay = 1  # 初始延迟秒数
         
         for retry_count in range(max_retries):
             try:
@@ -489,7 +489,7 @@ class MultiWebsiteMonitor:
                 
                 # 使用共享的session，添加特定网站的额外请求头
                 # 分别设置连接超时和读取超时：连接超时15秒，读取超时45秒
-                response = self.session.get(url, timeout=(15, 45), 
+                response = self.session.get(url, timeout=(10, 20), 
                                        proxies={'http': None, 'https': None, 'ftp': None},
                                        verify=False,  # 关闭SSL验证，避免证书问题
                                        headers=additional_headers if additional_headers else None)
@@ -569,7 +569,7 @@ class MultiWebsiteMonitor:
         total_new_reports = 0
         
         for config in self.website_configs:
-            logger.info(f"检查网站: {config.name} ({config.url})")
+            logger.debug(f"检查网站: {config.name} ({config.url})")
             new_reports = self._check_single_website(config, send_email)
             results[config.name] = new_reports
             total_new_reports += new_reports
@@ -626,8 +626,8 @@ class MultiWebsiteMonitor:
                     
                     if report_id:
                         new_reports_count += 1
-                        # 在控制台打印发现的新报告
-                        print(f"发现新报告 [{config.name}]：{title} - {url}")
+                        # 记录发现的新报告
+                        logger.debug(f"发现新报告 [{config.name}]：{title} - {url}")
                         
                         # 发送邮件通知（如果启用且允许发送邮件）
                         if send_email and self.enable_email and self.email_sender:
@@ -688,15 +688,15 @@ class MultiWebsiteMonitor:
                     print(f"本次检查发现 {total_new} 个新报告:")
                     for site_name, count in results.items():
                         if count > 0:
-                            print(f"  {site_name}: {count} 个")
+                            logger.debug(f"  {site_name}: {count} 个")
                 else:
-                    print("本次检查未发现新报告")
+                    logger.debug("本次检查未发现新报告")
                 
                 # 如果不是最后一次运行，则等待
                 if max_runs is None or run_count < max_runs:
                     next_check_time = datetime.now() + timedelta(seconds=self.check_interval_seconds)
-                    print(f"下次检查时间: {next_check_time.strftime('%Y-%m-%d %H:%M:%S')}")
-                    print(f"等待 {self.check_interval_seconds/3600:.1f} 小时...")
+                    logger.debug(f"下次检查时间: {next_check_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                    logger.debug(f"等待 {self.check_interval_seconds/3600:.1f} 小时...")
                     
                     # 等待间隔时间
                     self._wait_with_interrupt(self.check_interval_seconds)
