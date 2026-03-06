@@ -767,9 +767,9 @@ class MonitorService:
                     'error': '无法创建监控器，邮件发送失败'
                 }
             
-            # 获取未发送的报告
+            # 获取最近2小时内未发送的报告
             with DatabaseManager(self.db_path) as db:
-                unsent_reports = db.get_unsent_reports()
+                unsent_reports = db.get_unsent_reports(hours=2)
                 
             if not unsent_reports:
                 return {

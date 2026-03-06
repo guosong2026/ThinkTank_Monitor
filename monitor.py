@@ -341,14 +341,14 @@ class WebsiteMonitor:
         
         try:
             with DatabaseManager(self.db_path) as db:
-                # 获取未发送的报告
-                unsent_reports = db.get_unsent_reports()
+                # 获取最近2小时内未发送的报告
+                unsent_reports = db.get_unsent_reports(hours=2)
                 
                 if not unsent_reports:
                     logger.info("没有未发送的报告")
                     return 0
                 
-                logger.info(f"找到 {len(unsent_reports)} 个未发送的报告，开始发送邮件通知...")
+                logger.info(f"找到 {len(unsent_reports)} 个最近2小时内未发送的报告，开始发送邮件通知...")
                 
                 success_count = 0
                 
@@ -796,13 +796,13 @@ class MultiWebsiteMonitor:
         try:
             from db import DatabaseManager
             with DatabaseManager(self.db_path) as db:
-                unsent_reports = db.get_unsent_reports()
+                unsent_reports = db.get_unsent_reports(hours=2)
                 
                 if not unsent_reports:
                     logger.info("没有未发送的报告")
                     return 0
                 
-                logger.info(f"找到 {len(unsent_reports)} 个未发送的报告，开始发送邮件通知...")
+                logger.info(f"找到 {len(unsent_reports)} 个最近2小时内未发送的报告，开始发送邮件通知...")
                 
                 success_count = 0
                 

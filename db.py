@@ -248,25 +248,65 @@ class DatabaseManager:
             self.connection.rollback()
             return False
     
-    def get_unsent_reports(self) -> List[dict]:
+    def get_unsent_reports(self, hours: Optional[int] = None) -> List[dict]:
         """
         获取未发送的报告
         
+        Args:
+            hours: 可选，限制报告发现时间在最近N小时内，None表示无时间限制
+            
         Returns:
             List[dict]: 未发送的报告列表
         """
-        select_sql = "SELECT * FROM reports WHERE sent_status = 0 ORDER BY discovered_time"
+        if hours is not None:
+            # 获取所有未发送报告，时间过滤在Python层面进行
+            select_sql = "SELECT * FROM reports WHERE sent_status = 0 ORDER BY discovered_time"
+            params = ()
+        else:
+            select_sql = "SELECT * FROM reports WHERE sent_status = 0 ORDER BY discovered_time"
+            params = ()
         
         try:
             cursor = self.connection.cursor()
-            cursor.execute(select_sql)
+            cursor.execute(select_sql, params)
             rows = cursor.fetchall()
             
             reports = []
             for row in rows:
                 reports.append(dict(row))
             
-            logger.debug(f"获取到 {len(reports)} 个未发送的报告")
+            # 如果指定了小时数，进行Python层面的时间过滤（避免时区和格式问题）
+            if hours is not None:
+                from datetime import datetime, timedelta
+                cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+                
+                filtered_reports = []
+                for report in reports:
+                    # 解析discovered_time（ISO格式）
+                    try:
+                        discovered_str = report['discovered_time']
+                        if 'T' in discovered_str:
+                            # ISO格式: YYYY-MM-DDTHH:MM:SS
+                            discovered_time = datetime.fromisoformat(discovered_str.replace('Z', '+00:00'))
+                        else:
+                            # SQLite格式: YYYY-MM-DD HH:MM:SS
+                            discovered_time = datetime.strptime(discovered_str, '%Y-%m-%d %H:%M:%S')
+                        
+                        # 转换为UTC时间进行比较（如果discovered_time是本地时间，需要调整）
+                        # 假设discovered_time存储为UTC时间
+                        if discovered_time >= cutoff_time:
+                            filtered_reports.append(report)
+                    except (ValueError, KeyError) as e:
+                        logger.warning(f"解析报告发现时间失败 {report.get('id', 'unknown')}: {e}")
+                        # 无法解析时间，保留报告（安全起见）
+                        filtered_reports.append(report)
+                
+                reports = filtered_reports
+                time_filter = f"最近{hours}小时内"
+            else:
+                time_filter = "全部"
+            
+            logger.debug(f"获取到 {len(reports)} 个未发送的报告 ({time_filter})")
             return reports
             
         except sqlite3.Error as e:
