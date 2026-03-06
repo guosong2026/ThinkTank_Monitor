@@ -176,7 +176,7 @@ class MonitorService:
         
         try:
             logger.info("开始单次监控检查")
-            results = self.monitor.run_once(send_email=send_email)
+            results = self.monitor.run_once(send_email=send_email, delay_between_sites=30)
             new_reports_count = sum(results.values())
             logger.info(f"单次监控检查完成: {results}")
             
@@ -1045,7 +1045,7 @@ if __name__ == "__main__":
     print(f"   下次运行时间: {status.get('next_run_time', 'N/A')}")
     
     print("\n2. 运行单次检查:")
-    results = service.run_once()
+    results = service.run_once(delay_between_sites=30)
     if results:
         print(f"   检查结果: {results}")
     else:

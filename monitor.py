@@ -486,6 +486,8 @@ class MultiWebsiteMonitor:
                     time.sleep(delay)
                 else:
                     logger.debug(f"正在获取页面: {url}")
+                    # 首次请求前添加微小延迟，降低瞬时负载
+                    time.sleep(0.5)
                 
                 # 使用共享的session，添加特定网站的额外请求头
                 # 分别设置连接超时和读取超时：连接超时15秒，读取超时45秒
@@ -555,24 +557,32 @@ class MultiWebsiteMonitor:
         
         return None
     
-    def run_once(self, send_email: bool = True) -> Dict[str, int]:
+    def run_once(self, send_email: bool = True, delay_between_sites: int = 30) -> Dict[str, int]:
         """
         执行单次监控检查（所有网站）
         
         Args:
             send_email: 是否发送邮件通知（默认True）
+            delay_between_sites: 网站检查之间的延迟秒数（默认30秒）
             
         Returns:
             Dict[str, int]: 每个网站发现的新报告数量
         """
         results = {}
         total_new_reports = 0
+        total_sites = len(self.website_configs)
         
-        for config in self.website_configs:
-            logger.debug(f"检查网站: {config.name} ({config.url})")
+        for i, config in enumerate(self.website_configs):
+            logger.debug(f"检查网站 ({i+1}/{total_sites}): {config.name} ({config.url})")
             new_reports = self._check_single_website(config, send_email)
             results[config.name] = new_reports
             total_new_reports += new_reports
+            
+            # 在网站检查之间添加延迟（除了最后一个网站）
+            if i < total_sites - 1 and delay_between_sites > 0:
+                logger.debug(f"等待 {delay_between_sites} 秒后进行下一个网站检查...")
+                import time
+                time.sleep(delay_between_sites)
         
         logger.info(f"所有网站检查完成，共发现 {total_new_reports} 个新报告")
         return results
