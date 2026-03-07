@@ -380,6 +380,246 @@ def wwf_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     
     return unique_reports
 
+def oecd_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
+    """
+    OECD 报告页面解析器
+    页面URL已筛选为特定政策领域（pa17）和语言（en）
+    注意：该网站可能返回403错误，需要特殊处理
+    """
+    from bs4 import BeautifulSoup
+    
+    if not html_content:
+        return []
+    
+    reports = []
+    soup = BeautifulSoup(html_content, 'lxml')
+    
+    # 导入WebsiteConfig以使用其清理和过滤方法
+    from website_configs import WebsiteConfig
+    config = WebsiteConfig('OECD', base_url)
+    
+    # OECD特定选择器（基于常见模式）
+    selectors = [
+        'article a',
+        '.card a',
+        '.publication a',
+        '.report a',
+        '.item a',
+        'h3 a',
+        'h2 a',
+        '.title a',
+        '.result-item a',
+        '.document a'
+    ]
+    
+    for selector in selectors:
+        links = soup.select(selector)
+        if links:
+            for link in links:
+                title = link.text.strip()
+                href = link.get('href', '')
+                
+                if href and title:
+                    full_url = urljoin(base_url, href)
+                    # 清理标题
+                    cleaned_title = config._clean_title(title)
+                    if not cleaned_title:
+                        continue
+                    # 检查是否是报告链接
+                    if '/publications/' in full_url.lower() or '/report/' in full_url.lower():
+                        if config._is_report_link(full_url, cleaned_title):
+                            reports.append({
+                                'title': cleaned_title,
+                                'url': full_url,
+                                'source': 'OECD'
+                            })
+    
+    # 如果没找到，尝试通用方法：查找所有包含'/publications/'的链接
+    if not reports:
+        all_links = soup.find_all('a', href=True)
+        for link in all_links:
+            href = link.get('href', '')
+            title = link.text.strip()
+            if href and title:
+                if '/publications/' in href.lower():
+                    full_url = urljoin(base_url, href)
+                    cleaned_title = config._clean_title(title)
+                    if cleaned_title and config._is_report_link(full_url, cleaned_title):
+                        reports.append({
+                            'title': cleaned_title,
+                            'url': full_url,
+                            'source': 'OECD'
+                        })
+    
+    # 去重
+    unique_reports = []
+    seen_urls = set()
+    for report in reports:
+        if report['url'] not in seen_urls:
+            seen_urls.add(report['url'])
+            unique_reports.append(report)
+    
+    return unique_reports
+
+def wri_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
+    """
+    WRI (World Resources Institute) 洞察页面解析器
+    页面URL已筛选为insights-50类型
+    注意：该网站可能返回403错误，需要特殊处理
+    """
+    from bs4 import BeautifulSoup
+    
+    if not html_content:
+        return []
+    
+    reports = []
+    soup = BeautifulSoup(html_content, 'lxml')
+    
+    # 导入WebsiteConfig以使用其清理和过滤方法
+    from website_configs import WebsiteConfig
+    config = WebsiteConfig('WRI', base_url)
+    
+    # WRI特定选择器（基于常见模式）
+    selectors = [
+        'article a',
+        '.card a',
+        '.insight a',
+        '.resource a',
+        '.item a',
+        'h3 a',
+        'h2 a',
+        '.title a',
+        '.entry-title a'
+    ]
+    
+    for selector in selectors:
+        links = soup.select(selector)
+        if links:
+            for link in links:
+                title = link.text.strip()
+                href = link.get('href', '')
+                
+                if href and title:
+                    full_url = urljoin(base_url, href)
+                    # 清理标题
+                    cleaned_title = config._clean_title(title)
+                    if not cleaned_title:
+                        continue
+                    # 检查是否是洞察力链接
+                    if '/insights/' in full_url.lower() or '/insight/' in full_url.lower():
+                        if config._is_report_link(full_url, cleaned_title):
+                            reports.append({
+                                'title': cleaned_title,
+                                'url': full_url,
+                                'source': 'WRI'
+                            })
+    
+    # 如果没找到，尝试通用方法：查找所有包含'insight'的链接
+    if not reports:
+        all_links = soup.find_all('a', href=True)
+        for link in all_links:
+            href = link.get('href', '')
+            title = link.text.strip()
+            if href and title:
+                if '/insights/' in href.lower() or '/insight/' in href.lower():
+                    full_url = urljoin(base_url, href)
+                    cleaned_title = config._clean_title(title)
+                    if cleaned_title and config._is_report_link(full_url, cleaned_title):
+                        reports.append({
+                            'title': cleaned_title,
+                            'url': full_url,
+                            'source': 'WRI'
+                        })
+    
+    # 去重
+    unique_reports = []
+    seen_urls = set()
+    for report in reports:
+        if report['url'] not in seen_urls:
+            seen_urls.add(report['url'])
+            unique_reports.append(report)
+    
+    return unique_reports
+
+def unhabitat_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
+    """
+    UN-Habitat 研究出版物页面解析器
+    页面使用.publication-list.container元素
+    """
+    from bs4 import BeautifulSoup
+    
+    if not html_content:
+        return []
+    
+    reports = []
+    soup = BeautifulSoup(html_content, 'lxml')
+    
+    # 导入WebsiteConfig以使用其清理和过滤方法
+    from website_configs import WebsiteConfig
+    
+    # 创建临时WebsiteConfig实例
+    config = WebsiteConfig('UN-Habitat', base_url)
+    
+    # 方法1：查找出版物列表容器
+    publication_containers = soup.select('.publication-list.container')
+    
+    for container in publication_containers:
+        # 查找容器中的所有链接
+        links = container.find_all('a', href=True)
+        for link in links:
+            title = link.text.strip()
+            href = link.get('href', '')
+            
+            # 清理标题
+            cleaned_title = config._clean_title(title)
+            if not cleaned_title:
+                continue
+                
+            # 跳过"Read more"链接
+            if cleaned_title.lower() in ['read more', 'read now', 'learn more']:
+                continue
+                
+            full_url = urljoin(base_url, href)
+            
+            # 检查是否是报告链接
+            if config._is_report_link(full_url, cleaned_title):
+                reports.append({
+                    'title': cleaned_title,
+                    'url': full_url,
+                    'source': 'UN-Habitat'
+                })
+    
+    # 方法2：如果方法1没找到，尝试查找包含'/knowledge/'的链接
+    if not reports:
+        all_links = soup.find_all('a', href=True)
+        for link in all_links:
+            href = link.get('href', '')
+            title = link.text.strip()
+            
+            # 清理标题
+            cleaned_title = config._clean_title(title)
+            if not cleaned_title:
+                continue
+                
+            # 检查是否是知识库链接
+            if '/knowledge/' in href and len(cleaned_title) > 20:
+                full_url = urljoin(base_url, href)
+                if config._is_report_link(full_url, cleaned_title):
+                    reports.append({
+                        'title': cleaned_title,
+                        'url': full_url,
+                        'source': 'UN-Habitat'
+                    })
+    
+    # 去重
+    unique_reports = []
+    seen_urls = set()
+    for report in reports:
+        if report['url'] not in seen_urls:
+            seen_urls.add(report['url'])
+            unique_reports.append(report)
+    
+    return unique_reports
 
 def sei_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     """
@@ -1918,6 +2158,21 @@ DEFAULT_WEBSITES = [
         url="https://www.lincolninst.edu/publications/policy-focus-reports-policy-briefs/",
         parser_func=lincoln_institute_parser
     ),
+    WebsiteConfig(
+        name="UN-Habitat",
+        url="https://unhabitat.org/knowledge/research-and-publications",
+        parser_func=unhabitat_parser
+    ),
+    WebsiteConfig(
+        name="Nature Cities",
+        url="https://www.nature.com/natcities/reviews-and-analysis",
+        parser_func=nature_cities_parser
+    ),
+    WebsiteConfig(
+        name="World Bank",
+        url="https://openknowledge.worldbank.org/search?query=&f.topic=Urban%20Development,%20equals&spc.page=1",
+        parser_func=world_bank_parser
+    ),
 ]
 
 # 网站配置字典（按名称索引）
@@ -1949,6 +2204,171 @@ def remove_website_config(name: str) -> bool:
                 DEFAULT_WEBSITES.pop(i)
                 return True
     return False
+
+
+def nature_cities_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
+    """
+    Nature Cities 评论与分析页面解析器
+    页面包含文章卡片，可能需要处理动态加载内容
+    """
+    from bs4 import BeautifulSoup
+    
+    if not html_content:
+        return []
+    
+    reports = []
+    soup = BeautifulSoup(html_content, 'lxml')
+    
+    # 导入WebsiteConfig以使用其清理和过滤方法
+    from website_configs import WebsiteConfig
+    config = WebsiteConfig('Nature Cities', base_url)
+    
+    # Nature Cities特定选择器（基于常见模式）
+    # Nature网站通常使用.c-card、article等类
+    selectors = [
+        'article a',
+        '.c-card a',
+        '.c-card__link',
+        '.c-card__title a',
+        '.c-article-item a',
+        'h3 a',
+        'h2 a',
+        'h1 a',
+        '.c-article-title a',
+        '.article-item a',
+        '.post-item a'
+    ]
+    
+    for selector in selectors:
+        links = soup.select(selector)
+        if links:
+            for link in links:
+                title = link.text.strip()
+                href = link.get('href', '')
+                
+                if href and title:
+                    full_url = urljoin(base_url, href)
+                    # 清理标题
+                    cleaned_title = config._clean_title(title)
+                    if not cleaned_title:
+                        continue
+                    # 检查是否是文章链接
+                    if '/natcities/articles/' in full_url.lower() or '/articles/' in full_url.lower():
+                        if config._is_report_link(full_url, cleaned_title):
+                            reports.append({
+                                'title': cleaned_title,
+                                'url': full_url,
+                                'source': 'Nature Cities'
+                            })
+    
+    # 如果没找到，尝试通用方法：查找所有包含'article'的链接
+    if not reports:
+        all_links = soup.find_all('a', href=True)
+        for link in all_links:
+            href = link.get('href', '')
+            title = link.text.strip()
+            if href and title:
+                if '/natcities/articles/' in href.lower() or '/articles/' in href.lower():
+                    full_url = urljoin(base_url, href)
+                    cleaned_title = config._clean_title(title)
+                    if cleaned_title and config._is_report_link(full_url, cleaned_title):
+                        reports.append({
+                            'title': cleaned_title,
+                            'url': full_url,
+                            'source': 'Nature Cities'
+                        })
+    
+    # 去重
+    unique_reports = []
+    seen_urls = set()
+    for report in reports:
+        if report['url'] not in seen_urls:
+            seen_urls.add(report['url'])
+            unique_reports.append(report)
+    
+    return unique_reports
+
+
+def world_bank_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
+    """
+    World Bank Open Knowledge 搜索页面解析器
+    页面URL已筛选为Urban Development主题
+    """
+    from bs4 import BeautifulSoup
+    
+    if not html_content:
+        return []
+    
+    reports = []
+    soup = BeautifulSoup(html_content, 'lxml')
+    
+    # 导入WebsiteConfig以使用其清理和过滤方法
+    from website_configs import WebsiteConfig
+    config = WebsiteConfig('World Bank', base_url)
+    
+    # World Bank Open Knowledge特定选择器
+    # 该网站使用DSpace架构，通常有.ds-search-result等类
+    selectors = [
+        '.ds-search-result a',
+        '.artifact-title a',
+        '.metadata a',
+        '.title a',
+        'h3 a',
+        'h2 a',
+        '.item-title a',
+        '.record-title a',
+        '.document-title a',
+        '.result-item a'
+    ]
+    
+    for selector in selectors:
+        links = soup.select(selector)
+        if links:
+            for link in links:
+                title = link.text.strip()
+                href = link.get('href', '')
+                
+                if href and title:
+                    full_url = urljoin(base_url, href)
+                    # 清理标题
+                    cleaned_title = config._clean_title(title)
+                    if not cleaned_title:
+                        continue
+                    # 检查是否是文档链接
+                    if '/handle/' in full_url.lower() or '/bitstream/' in full_url.lower() or '/entities/' in full_url.lower():
+                        if config._is_report_link(full_url, cleaned_title):
+                            reports.append({
+                                'title': cleaned_title,
+                                'url': full_url,
+                                'source': 'World Bank'
+                            })
+    
+    # 如果没找到，尝试通用方法：查找所有包含'/handle/'的链接
+    if not reports:
+        all_links = soup.find_all('a', href=True)
+        for link in all_links:
+            href = link.get('href', '')
+            title = link.text.strip()
+            if href and title:
+                if '/handle/' in href.lower() or '/bitstream/' in href.lower():
+                    full_url = urljoin(base_url, href)
+                    cleaned_title = config._clean_title(title)
+                    if cleaned_title and config._is_report_link(full_url, cleaned_title):
+                        reports.append({
+                            'title': cleaned_title,
+                            'url': full_url,
+                            'source': 'World Bank'
+                        })
+    
+    # 去重
+    unique_reports = []
+    seen_urls = set()
+    for report in reports:
+        if report['url'] not in seen_urls:
+            seen_urls.add(report['url'])
+            unique_reports.append(report)
+    
+    return unique_reports
 
 
 # ============================================================================
