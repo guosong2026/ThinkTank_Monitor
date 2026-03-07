@@ -2089,122 +2089,6 @@ def lincoln_institute_parser(html_content: str, base_url: str) -> List[Dict[str,
 
 # ============================================================================
 # 网站配置列表
-# ============================================================================
-
-# 默认监控的网站列表
-DEFAULT_WEBSITES = [
-    WebsiteConfig(
-        name="CONCITO",
-        url="https://concito.dk/en/analyser",
-        parser_func=concito_parser
-    ),
-    WebsiteConfig(
-        name="EEB",
-        url="https://eeb.org/en/library/",
-        parser_func=eeb_parser
-    ),
-    WebsiteConfig(
-        name="Green Alliance",
-        url="https://green-alliance.org.uk",
-        parser_func=green_alliance_parser
-    ),
-    WebsiteConfig(
-        name="Pembina Institute",
-        url="https://www.pembina.org/all",
-        parser_func=pembina_parser
-    ),
-    WebsiteConfig(
-        name="Ecotrust",
-        url="https://ecotrust.org/stories-news/publications-reports/",
-        parser_func=ecotrust_parser
-    ),
-    WebsiteConfig(
-        name="Nature Conservancy",
-        url="https://www.nature.org/en-us/what-we-do/our-insights/reports/",
-        parser_func=nature_conservancy_parser
-    ),
-    WebsiteConfig(
-        name="IISD",
-        url="https://www.iisd.org/publications",
-        parser_func=iisd_parser
-    ),
-    WebsiteConfig(
-        name="Ecologic Institute",
-        url="https://www.ecologic.eu/publications",
-        parser_func=ecologic_parser
-    ),
-    WebsiteConfig(
-        name="IEEP",
-        url="https://ieep.eu/publications/",
-        parser_func=ieep_parser
-    ),
-    WebsiteConfig(
-        name="IUCN",
-        url="https://iucn.org/press-releases",
-        parser_func=iucn_parser
-    ),
-    WebsiteConfig(
-        name="Stockholm Resilience",
-        url="https://www.stockholmresilience.org/publications.html",
-        parser_func=stockholm_resilience_parser
-    ),
-    WebsiteConfig(
-        name="Biodiversity Council",
-        url="https://biodiversitycouncil.org.au/resources?category=Report",
-        parser_func=biodiversity_council_parser
-    ),
-    WebsiteConfig(
-        name="Lincoln Institute",
-        url="https://www.lincolninst.edu/publications/policy-focus-reports-policy-briefs/",
-        parser_func=lincoln_institute_parser
-    ),
-    WebsiteConfig(
-        name="UN-Habitat",
-        url="https://unhabitat.org/knowledge/research-and-publications",
-        parser_func=unhabitat_parser
-    ),
-    WebsiteConfig(
-        name="Nature Cities",
-        url="https://www.nature.com/natcities/reviews-and-analysis",
-        parser_func=nature_cities_parser
-    ),
-    WebsiteConfig(
-        name="World Bank",
-        url="https://openknowledge.worldbank.org/search?query=&f.topic=Urban%20Development,%20equals&spc.page=1",
-        parser_func=world_bank_parser
-    ),
-]
-
-# 网站配置字典（按名称索引）
-WEBSITE_CONFIGS = {config.name: config for config in DEFAULT_WEBSITES}
-
-
-def get_website_config(name: str) -> Optional[WebsiteConfig]:
-    """获取指定名称的网站配置"""
-    return WEBSITE_CONFIGS.get(name)
-
-
-def get_all_websites() -> List[WebsiteConfig]:
-    """获取所有网站配置"""
-    return DEFAULT_WEBSITES.copy()
-
-
-def add_website_config(config: WebsiteConfig) -> None:
-    """添加新的网站配置"""
-    DEFAULT_WEBSITES.append(config)
-    WEBSITE_CONFIGS[config.name] = config
-
-
-def remove_website_config(name: str) -> bool:
-    """移除网站配置"""
-    if name in WEBSITE_CONFIGS:
-        del WEBSITE_CONFIGS[name]
-        for i, config in enumerate(DEFAULT_WEBSITES):
-            if config.name == name:
-                DEFAULT_WEBSITES.pop(i)
-                return True
-    return False
-
 
 def nature_cities_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     """
@@ -2373,6 +2257,123 @@ def world_bank_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
 
 # ============================================================================
 # 测试函数
+# ============================================================================
+
+# 默认监控的网站列表
+DEFAULT_WEBSITES = [
+    WebsiteConfig(
+        name="CONCITO",
+        url="https://concito.dk/en/analyser",
+        parser_func=concito_parser
+    ),
+    WebsiteConfig(
+        name="EEB",
+        url="https://eeb.org/en/library/",
+        parser_func=eeb_parser
+    ),
+    WebsiteConfig(
+        name="Green Alliance",
+        url="https://green-alliance.org.uk",
+        parser_func=green_alliance_parser
+    ),
+    WebsiteConfig(
+        name="Pembina Institute",
+        url="https://www.pembina.org/all",
+        parser_func=pembina_parser
+    ),
+    WebsiteConfig(
+        name="Ecotrust",
+        url="https://ecotrust.org/stories-news/publications-reports/",
+        parser_func=ecotrust_parser
+    ),
+    WebsiteConfig(
+        name="Nature Conservancy",
+        url="https://www.nature.org/en-us/what-we-do/our-insights/reports/",
+        parser_func=nature_conservancy_parser
+    ),
+    WebsiteConfig(
+        name="IISD",
+        url="https://www.iisd.org/publications",
+        parser_func=iisd_parser
+    ),
+    WebsiteConfig(
+        name="Ecologic Institute",
+        url="https://www.ecologic.eu/publications",
+        parser_func=ecologic_parser
+    ),
+    WebsiteConfig(
+        name="IEEP",
+        url="https://ieep.eu/publications/",
+        parser_func=ieep_parser
+    ),
+    WebsiteConfig(
+        name="IUCN",
+        url="https://iucn.org/press-releases",
+        parser_func=iucn_parser
+    ),
+    WebsiteConfig(
+        name="Stockholm Resilience",
+        url="https://www.stockholmresilience.org/publications.html",
+        parser_func=stockholm_resilience_parser
+    ),
+    WebsiteConfig(
+        name="Biodiversity Council",
+        url="https://biodiversitycouncil.org.au/resources?category=Report",
+        parser_func=biodiversity_council_parser
+    ),
+    WebsiteConfig(
+        name="Lincoln Institute",
+        url="https://www.lincolninst.edu/publications/policy-focus-reports-policy-briefs/",
+        parser_func=lincoln_institute_parser
+    ),
+    WebsiteConfig(
+        name="UN-Habitat",
+        url="https://unhabitat.org/knowledge/research-and-publications",
+        parser_func=unhabitat_parser
+    ),
+    WebsiteConfig(
+        name="Nature Cities",
+        url="https://www.nature.com/natcities/reviews-and-analysis",
+        parser_func=nature_cities_parser
+    ),
+    WebsiteConfig(
+        name="World Bank",
+        url="https://openknowledge.worldbank.org/search?query=&f.topic=Urban%20Development,%20equals&spc.page=1",
+        parser_func=world_bank_parser
+    ),
+]
+
+# 网站配置字典（按名称索引）
+WEBSITE_CONFIGS = {config.name: config for config in DEFAULT_WEBSITES}
+
+
+def get_website_config(name: str) -> Optional[WebsiteConfig]:
+    """获取指定名称的网站配置"""
+    return WEBSITE_CONFIGS.get(name)
+
+
+def get_all_websites() -> List[WebsiteConfig]:
+    """获取所有网站配置"""
+    return DEFAULT_WEBSITES.copy()
+
+
+def add_website_config(config: WebsiteConfig) -> None:
+    """添加新的网站配置"""
+    DEFAULT_WEBSITES.append(config)
+    WEBSITE_CONFIGS[config.name] = config
+
+
+def remove_website_config(name: str) -> bool:
+    """移除网站配置"""
+    if name in WEBSITE_CONFIGS:
+        del WEBSITE_CONFIGS[name]
+        for i, config in enumerate(DEFAULT_WEBSITES):
+            if config.name == name:
+                DEFAULT_WEBSITES.pop(i)
+                return True
+    return False
+
+
 # ============================================================================
 
 def test_all_parsers():
