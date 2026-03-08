@@ -2087,9 +2087,6 @@ def lincoln_institute_parser(html_content: str, base_url: str) -> List[Dict[str,
     return unique_reports
 
 
-# ============================================================================
-# 网站配置列表
-
 def nature_cities_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     """
     Nature Cities 评论与分析页面解析器
@@ -2171,7 +2168,6 @@ def nature_cities_parser(html_content: str, base_url: str) -> List[Dict[str, str
             unique_reports.append(report)
     
     return unique_reports
-
 
 def world_bank_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     """
@@ -2257,6 +2253,12 @@ def world_bank_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
 
 # ============================================================================
 # 测试函数
+# ============================================================================
+
+
+
+# ============================================================================
+# 网站配置列表
 # ============================================================================
 
 # 默认监控的网站列表
@@ -2372,10 +2374,6 @@ def remove_website_config(name: str) -> bool:
                 DEFAULT_WEBSITES.pop(i)
                 return True
     return False
-
-
-# ============================================================================
-
 def test_all_parsers():
     """测试所有解析器"""
     import requests

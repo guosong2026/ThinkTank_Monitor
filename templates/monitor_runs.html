@@ -39,6 +39,88 @@
         <h1 class="mb-4"><i class="fas fa-history me-2"></i>监控运行记录</h1>
         <p class="text-muted">展示最近10次监控收集事件的统计数据，包括CPU耗时、新报告数量等。</p>
         
+        <!-- 系统状态面板 -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-tachometer-alt me-2"></i>系统状态
+                <button id="refresh-status-btn" class="btn btn-sm btn-outline-light float-end">
+                    <i class="fas fa-redo"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-light h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">
+                                    {% if status.is_running %}
+                                        <span class="badge bg-success">运行中</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">已停止</span>
+                                    {% endif %}
+                                </h5>
+                                <p class="card-text">监控状态</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-light h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ status.website_count }}</h5>
+                                <p class="card-text">监控网站数</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-light h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ status.total_reports }}</h5>
+                                <p class="card-text">活动报告总数</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-light h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ status.sent_reports }} / {{ status.unsent_reports }}</h5>
+                                <p class="card-text">已发送/待发送</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted">监控模式</h6>
+                                <p class="card-text">
+                                    {% if status.monitor_enabled %}
+                                        自动监控 (每{{ status.check_interval_hours }}小时)
+                                    {% else %}
+                                        手动模式
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted">下次检查时间</h6>
+                                <p class="card-text">
+                                    {% if status.next_run_time %}
+                                        {{ status.next_run_time }}
+                                    {% else %}
+                                        未计划
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div class="card mb-4">
             <div class="card-header">
                 <i class="fas fa-chart-line me-2"></i>统计摘要
@@ -143,7 +225,20 @@
         </div>
     </div>
     
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
     <!-- Bootstrap 5 JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 自定义脚本 -->
+    <script>
+        $(document).ready(function() {
+            // 刷新状态按钮
+            $('#refresh-status-btn').click(function() {
+                location.reload();
+            });
+        });
+    </script>
 </body>
 </html>

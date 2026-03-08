@@ -18,94 +18,15 @@
 <div class="row">
     <div class="col-md-8">
         <div class="card">
-            <div class="card-header bg-primary text-white">
-                <i class="fas fa-info-circle me-2"></i>系统状态
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-bell me-2"></i>最近活动
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <h5>监控状态</h5>
-                        <div class="d-flex align-items-center">
-                            {% if status.is_running %}
-                            <span class="status-badge monitor-running me-3">
-                                <i class="fas fa-play-circle me-1"></i>运行中
-                            </span>
-                            {% else %}
-                            <span class="status-badge monitor-stopped me-3">
-                                <i class="fas fa-stop-circle me-1"></i>已停止
-                            </span>
-                            {% endif %}
-                            
-                            <div>
-                                <small class="text-muted">数据库设置: 
-                                    {% if status.monitor_enabled %}
-                                    <span class="text-success">启用</span>
-                                    {% else %}
-                                    <span class="text-danger">禁用</span>
-                                    {% endif %}
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6 mb-3">
-                        <h5>检查间隔</h5>
-                        <p class="fs-4">{{ status.check_interval_hours }} 小时</p>
-                    </div>
-                    
-                    <div class="col-md-6 mb-3">
-                        <h5>监控网站</h5>
-                        <p class="fs-4">{{ status.website_count }} 个</p>
-                    </div>
-                    
-                    <div class="col-md-6 mb-3">
-                        <h5>收件人邮箱</h5>
-                        <p>
-                            {% if status.recipient_emails %}
-                                {{ status.recipient_emails|length }} 个
-                            {% else %}
-                                <span class="text-danger">未设置</span>
-                            {% endif %}
-                        </p>
-                    </div>
+                <div id="recent-activity">
+                    <p class="text-muted">加载中...</p>
                 </div>
-                
-                <div class="row mt-3">
-                    <div class="col-md-12">
-                        <h5>报告统计</h5>
-                        <div class="row">
-                            <div class="col-md-3 text-center">
-                                <div class="p-3 border rounded bg-light">
-                                    <h3 class="text-primary">{{ status.total_reports }}</h3>
-                                    <small class="text-muted">总报告数</small>
-                                </div>
-                            </div>
-                            <div class="col-md-3 text-center">
-                                <div class="p-3 border rounded bg-light">
-                                    <h3 class="text-success">{{ status.sent_reports }}</h3>
-                                    <small class="text-muted">已发送</small>
-                                </div>
-                            </div>
-                            <div class="col-md-3 text-center">
-                                <div class="p-3 border rounded bg-light">
-                                    <h3 class="text-warning">{{ status.unsent_reports }}</h3>
-                                    <small class="text-muted">未发送</small>
-                                </div>
-                            </div>
-                            <div class="col-md-3 text-center">
-                                <div class="p-3 border rounded bg-light">
-                                    <h3 class="text-info">
-                                        {% if status.total_reports > 0 %}
-                                            {{ "%.1f"|format(status.sent_reports / status.total_reports * 100) }}%
-                                        {% else %}
-                                            0%
-                                        {% endif %}
-                                    </h3>
-                                    <small class="text-muted">发送率</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="text-end mt-2">
+                    <a href="/reports" class="btn btn-sm btn-outline-info">查看最近推文</a>
                 </div>
             </div>
         </div>
@@ -154,22 +75,6 @@
                 </div>
             </div>
         </div>
-        
-        <div class="card mt-4">
-            <div class="card-header bg-info text-white">
-                <i class="fas fa-bell me-2"></i>最近活动
-            </div>
-            <div class="card-body">
-                <div id="recent-activity">
-                    <p class="text-muted">加载中...</p>
-                </div>
-                <div class="text-end mt-2">
-                    <a href="/reports" class="btn btn-sm btn-outline-info">查看最近推文</a>
-                </div>
-            </div>
-        </div>
-        
-
     </div>
 </div>
 
@@ -258,21 +163,24 @@
         // 更新网站列表
         function updateWebsitesTable() {
             // 基础网站信息（URL和状态）
-            const baseWebsites = [
-                {name: "CONCITO", url: "https://concito.dk/", status: "正常"},
-                {name: "EEB", url: "https://eeb.org/", status: "正常"},
-                {name: "Green Alliance", url: "https://green-alliance.org.uk", status: "正常"},
-                {name: "Pembina Institute", url: "https://www.pembina.org/", status: "正常"},
-                {name: "Ecotrust", url: "https://ecotrust.org/", status: "正常"},
-                {name: "Nature Conservancy", url: "https://www.nature.org/", status: "正常"},
-                {name: "IISD", url: "https://www.iisd.org/", status: "正常"},
-                {name: "Ecologic Institute", url: "https://www.ecologic.eu/", status: "正常"},
-                {name: "IEEP", url: "https://ieep.eu/", status: "正常"},
-                {name: "IUCN", url: "https://iucn.org/", status: "正常"},
-                {name: "Stockholm Resilience", url: "https://www.stockholmresilience.org/", status: "正常"},
-                {name: "Biodiversity Council", url: "https://biodiversitycouncil.org.au/", status: "正常"},
-                {name: "Lincoln Institute", url: "https://www.lincolninst.edu/", status: "正常"}
-            ];
+        const baseWebsites = [
+            {name: "CONCITO", url: "https://concito.dk/", status: "正常"},
+            {name: "EEB", url: "https://eeb.org/", status: "正常"},
+            {name: "Green Alliance", url: "https://green-alliance.org.uk", status: "正常"},
+            {name: "Pembina Institute", url: "https://www.pembina.org/", status: "正常"},
+            {name: "Ecotrust", url: "https://ecotrust.org/", status: "正常"},
+            {name: "Nature Conservancy", url: "https://www.nature.org/", status: "正常"},
+            {name: "IISD", url: "https://www.iisd.org/", status: "正常"},
+            {name: "Ecologic Institute", url: "https://www.ecologic.eu/", status: "正常"},
+            {name: "IEEP", url: "https://ieep.eu/", status: "正常"},
+            {name: "IUCN", url: "https://iucn.org/", status: "正常"},
+            {name: "Stockholm Resilience", url: "https://www.stockholmresilience.org/", status: "正常"},
+            {name: "Biodiversity Council", url: "https://biodiversitycouncil.org.au/", status: "正常"},
+            {name: "Lincoln Institute", url: "https://www.lincolninst.edu/", status: "正常"},
+            {name: "UN-Habitat", url: "https://unhabitat.org/", status: "正常"},
+            {name: "Nature Cities", url: "https://www.nature.com/natcities", status: "正常"},
+            {name: "World Bank", url: "https://www.worldbank.org/", status: "正常"}
+        ];
             
             // 加载智库详细信息
             $.getJSON('/static/website_details.json', function(detailsData) {

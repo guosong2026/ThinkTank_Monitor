@@ -467,7 +467,8 @@ def monitor_runs_page():
     """监控运行记录页面"""
     try:
         runs = monitor_service.get_recent_monitor_runs(limit=10)
-        return render_template('monitor_runs.html', runs=runs)
+        status = monitor_service.get_status()
+        return render_template('monitor_runs.html', runs=runs, status=status)
     except Exception as e:
         logger.error(f"监控运行记录页面加载失败: {e}")
         return render_template('error.html', error=str(e)), 500
