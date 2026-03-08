@@ -532,6 +532,97 @@ class DatabaseManager:
             logger.error(f"获取监控运行记录失败: {e}")
             return []
     
+    def get_recent_stats(self, days: int = 10) -> Dict[str, Any]:
+        """
+        获取最近N天的报告统计数据
+        
+        Args:
+            days: 统计天数，默认为10天
+            
+        Returns:
+            Dict[str, Any]: 统计数据，包含每日总计和网站来源分布
+        """
+        try:
+            cursor = self.connection.cursor()
+            
+            # 计算开始日期（当前日期往前推days-1天，包含今天）
+            from datetime import datetime, timedelta
+            end_date = datetime.utcnow().date()
+            start_date = end_date - timedelta(days=days-1)
+            
+            # 查询最近days天的报告，按日期和网站分组
+            # 使用substr提取日期部分（YYYY-MM-DD），处理两种格式：
+            # 1. ISO格式: 2026-02-28T15:01:17.198158
+            # 2. SQLite格式: 2026-02-28 15:01:17
+            cursor.execute("""
+                SELECT 
+                    substr(discovered_time, 1, 10) as date,
+                    source_website,
+                    COUNT(*) as count
+                FROM reports 
+                WHERE substr(discovered_time, 1, 10) >= ?
+                GROUP BY date, source_website
+                ORDER BY date DESC, count DESC
+            """, (str(start_date),))
+            
+            rows = cursor.fetchall()
+            
+            # 构建数据结构
+            daily_totals = []
+            website_distribution = {}
+            
+            # 生成所有日期的列表（从start_date到end_date）
+            date_list = []
+            current_date = start_date
+            while current_date <= end_date:
+                date_str = str(current_date)
+                date_list.append(date_str)
+                daily_totals.append({"date": date_str, "count": 0})
+                website_distribution[date_str] = {}
+                current_date += timedelta(days=1)
+            
+            # 填充数据
+            for row in rows:
+                date_str = row['date']
+                website = row['source_website']
+                count = row['count']
+                
+                # 更新每日总计
+                for daily in daily_totals:
+                    if daily['date'] == date_str:
+                        daily['count'] += count
+                        break
+                
+                # 更新网站分布
+                if date_str in website_distribution:
+                    website_distribution[date_str][website] = count
+            
+            # 获取所有出现的网站名称（用于图表标签）
+            all_websites = set()
+            for date_data in website_distribution.values():
+                all_websites.update(date_data.keys())
+            all_websites = sorted(list(all_websites))
+            
+            return {
+                "days": days,
+                "start_date": str(start_date),
+                "end_date": str(end_date),
+                "daily_totals": daily_totals,  # 按日期倒序排列
+                "website_distribution": website_distribution,
+                "all_websites": all_websites
+            }
+            
+        except sqlite3.Error as e:
+            logger.error(f"获取近期统计数据失败: {e}")
+            return {
+                "days": days,
+                "start_date": "",
+                "end_date": "",
+                "daily_totals": [],
+                "website_distribution": {},
+                "all_websites": []
+            }
+    
     def __enter__(self):
         """上下文管理器入口"""
         self.connect()

@@ -78,6 +78,45 @@
     </div>
 </div>
 
+<!-- 近期报告统计 -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-chart-line me-2"></i>近期报告统计
+                <button id="refresh-stats-btn" class="btn btn-sm btn-outline-light float-end">
+                    <i class="fas fa-redo"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-7">
+                        <h6 class="text-center">最近10天新报告数量趋势</h6>
+                        <div class="chart-container">
+                            <canvas id="dailyReportChart"></canvas>
+                        </div>
+                        <div class="text-center mt-2">
+                            <small class="text-muted">每日新发现的报告总数</small>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <h6 class="text-center">报告来源分布（最近10天）</h6>
+                        <div class="chart-container">
+                            <canvas id="websiteDistributionChart"></canvas>
+                        </div>
+                        <div class="text-center mt-2">
+                            <small class="text-muted">按网站来源统计的报告数量</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3 text-center">
+                    <small class="text-muted">数据更新时间: <span id="stats-update-time">--:--:--</span></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 网站状态表格 -->
 <div class="row mt-4">
     <div class="col-md-12">
@@ -149,7 +188,23 @@
 
 {% endblock %}
 
+<style>
+.chart-container {
+    position: relative;
+    height: 250px;
+    width: 100%;
+}
+@media (max-width: 768px) {
+    .chart-container {
+        height: 200px;
+    }
+}
+</style>
+
 {% block extra_js %}
+<!-- Chart.js 库 -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
     // 页面加载完成
     $(document).ready(function() {
@@ -285,16 +340,212 @@
             });
         }
         
-
+        // 加载近期报告统计数据
+        function loadRecentStats() {
+            $.get('/api/recent_stats', function(response) {
+                if (response.success && response.stats) {
+                    const stats = response.stats;
+                    updateCharts(stats);
+                    
+                    // 更新时间
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false });
+                    $('#stats-update-time').text(timeStr);
+                } else {
+                    console.error('获取统计数据失败:', response.error);
+                    $('#stats-update-time').text('获取失败');
+                }
+            }).fail(function() {
+                console.error('API请求失败');
+                $('#stats-update-time').text('请求失败');
+            });
+        }
+        
+        // 更新图表
+        function updateCharts(stats) {
+            // 提取数据
+            const dailyTotals = stats.daily_totals || [];
+            const websiteDistribution = stats.website_distribution || {};
+            const allWebsites = stats.all_websites || [];
+            
+            // 反转日期顺序（从旧到新），以便从左到右显示时间顺序
+            const dates = dailyTotals.map(d => d.date).reverse();
+            const counts = dailyTotals.map(d => d.count).reverse();
+            
+            // 1. 折线图：每日报告数量
+            const lineCtx = document.getElementById('dailyReportChart').getContext('2d');
+            
+            // 销毁现有图表实例
+            if (window.dailyReportChart instanceof Chart) {
+                window.dailyReportChart.destroy();
+            }
+            
+            window.dailyReportChart = new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: '报告数量',
+                        data: counts,
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '日期'
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 0
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: '报告数量'
+                            },
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // 2. 横向堆叠条形图：网站来源分布
+            const barCtx = document.getElementById('websiteDistributionChart').getContext('2d');
+            
+            // 准备堆叠条形图数据
+            // 创建颜色调色板
+            const colorPalette = [
+                '#007bff', '#28a745', '#dc3545', '#ffc107', '#17a2b8', 
+                '#6f42c1', '#e83e8c', '#fd7e14', '#20c997', '#6610f2',
+                '#0dcaf0', '#198754', '#6c757d', '#343a40', '#0d6efd'
+            ];
+            
+            // 创建数据集：每个网站一个数据集
+            const datasets = [];
+            allWebsites.forEach((website, index) => {
+                const color = colorPalette[index % colorPalette.length];
+                const data = [];
+                
+                // 按日期顺序获取该网站的数量
+                dates.forEach(date => {
+                    const count = websiteDistribution[date] && websiteDistribution[date][website] ? 
+                                 websiteDistribution[date][website] : 0;
+                    data.push(count);
+                });
+                
+                datasets.push({
+                    label: website,
+                    data: data,
+                    backgroundColor: color,
+                    borderColor: color,
+                    borderWidth: 1
+                });
+            });
+            
+            // 销毁现有图表实例
+            if (window.websiteDistributionChart instanceof Chart) {
+                window.websiteDistributionChart.destroy();
+            }
+            
+            window.websiteDistributionChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: dates,
+                    datasets: datasets
+                },
+                options: {
+                    indexAxis: 'y', // 横向条形图
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: datasets.length <= 10, // 如果网站太多，隐藏图例
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.x || 0;
+                                    return `${label}: ${value} 篇`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true,
+                            title: {
+                                display: true,
+                                text: '报告数量'
+                            },
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        },
+                        y: {
+                            stacked: true,
+                            title: {
+                                display: true,
+                                text: '日期'
+                            }
+                        }
+                    }
+                }
+            });
+        }
         
         // 初始化
         updateLastUpdateTime();
         updateWebsitesTable();
         updateRecentActivity();
+        loadRecentStats();
         
         // 刷新按钮
         $('#refresh-btn').click(function() {
             location.reload();
+        });
+        
+        // 刷新统计按钮
+        $('#refresh-stats-btn').click(function() {
+            $(this).find('i').addClass('fa-spin');
+            loadRecentStats();
+            
+            // 停止旋转动画
+            setTimeout(() => {
+                $(this).find('i').removeClass('fa-spin');
+            }, 1000);
         });
         
         // 开始监控按钮

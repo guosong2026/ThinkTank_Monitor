@@ -462,6 +462,26 @@ def api_get_monitor_runs():
             'error': str(e)
         }), 500
 
+@app.route('/api/recent_stats', methods=['GET'])
+def api_get_recent_stats():
+    """获取最近报告统计数据API"""
+    try:
+        days = request.args.get('days', 10, type=int)
+        if days < 1 or days > 30:
+            days = 10
+        
+        stats = monitor_service.get_recent_stats(days=days)
+        return jsonify({
+            'success': True,
+            'stats': stats
+        })
+    except Exception as e:
+        logger.error(f"获取近期统计数据API失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/monitor_runs', methods=['GET'])
 def monitor_runs_page():
     """监控运行记录页面"""

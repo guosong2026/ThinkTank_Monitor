@@ -979,6 +979,30 @@ class MonitorService:
             logger.error(f"导出报告失败: {e}")
             raise
     
+    def get_recent_stats(self, days: int = 10) -> Dict[str, Any]:
+        """
+        获取最近N天的报告统计数据
+        
+        Args:
+            days: 统计天数，默认为10天
+            
+        Returns:
+            Dict[str, Any]: 统计数据，包含每日总计和网站来源分布
+        """
+        try:
+            with DatabaseManager(self.db_path) as db:
+                return db.get_recent_stats(days=days)
+        except Exception as e:
+            logger.error(f"获取近期统计数据失败: {e}")
+            return {
+                "days": days,
+                "start_date": "",
+                "end_date": "",
+                "daily_totals": [],
+                "website_distribution": {},
+                "all_websites": []
+            }
+    
     def shutdown(self):
         """关闭监控服务（清理资源）"""
         try:
