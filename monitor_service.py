@@ -246,9 +246,6 @@ class MonitorService:
             smtp_port_str = os.environ.get("SMTP_PORT", str(EmailSender.SMTP_PORT))
             sender_email = os.environ.get("SENDER_EMAIL", EmailSender.SENDER_EMAIL)
             sender_password = os.environ.get("SENDER_PASSWORD", EmailSender.SENDER_PASSWORD)
-            sendgrid_api_key = os.environ.get("SENDGRID_API_KEY", EmailSender.SENDGRID_API_KEY)
-            mailgun_api_key = os.environ.get("MAILGUN_API_KEY", EmailSender.MAILGUN_API_KEY)
-            mailgun_domain = os.environ.get("MAILGUN_DOMAIN", EmailSender.MAILGUN_DOMAIN)
             
             # 如果密码为空，尝试从EmailSender.SENDER_PASSWORD获取
             if not sender_password and EmailSender.SENDER_PASSWORD:
@@ -261,14 +258,9 @@ class MonitorService:
                 logger.warning(f"SMTP端口格式无效: {smtp_port_str}，使用默认值{EmailSender.SMTP_PORT}")
                 smtp_port = EmailSender.SMTP_PORT
             
-            # 记录使用的配置（不包含密码和API密钥）
-            logger.info(f"使用邮件配置: 提供商={provider}, 发件人={sender_email}")
-            if provider == "smtp":
-                logger.info(f"  SMTP服务器={smtp_server}, 端口={smtp_port}")
-            elif provider == "sendgrid":
-                logger.info(f"  SendGrid API已配置")
-            elif provider == "mailgun":
-                logger.info(f"  Mailgun API已配置, 域名={mailgun_domain}")
+            # 记录使用的配置（不包含密码）
+            logger.info(f"使用邮件配置: 发件人={sender_email}")
+            logger.info(f"  SMTP服务器={smtp_server}, 端口={smtp_port}")
             
             # 创建邮件发送器实例
             email_sender = EmailSender(
@@ -277,9 +269,6 @@ class MonitorService:
                 smtp_port=smtp_port,
                 sender_email=sender_email,
                 sender_password=sender_password,
-                sendgrid_api_key=sendgrid_api_key,
-                mailgun_api_key=mailgun_api_key,
-                mailgun_domain=mailgun_domain,
                 recipient_emails=recipient_emails
             )
             
@@ -333,9 +322,6 @@ class MonitorService:
             smtp_server = os.environ.get("SMTP_SERVER", EmailSender.SMTP_SERVER)
             smtp_port_str = os.environ.get("SMTP_PORT", str(EmailSender.SMTP_PORT))
             sender_email = os.environ.get("SENDER_EMAIL", EmailSender.SENDER_EMAIL)
-            sendgrid_api_key = os.environ.get("SENDGRID_API_KEY", EmailSender.SENDGRID_API_KEY)
-            mailgun_api_key = os.environ.get("MAILGUN_API_KEY", EmailSender.MAILGUN_API_KEY)
-            mailgun_domain = os.environ.get("MAILGUN_DOMAIN", EmailSender.MAILGUN_DOMAIN)
             
             # 转换端口为整数
             try:
@@ -343,29 +329,15 @@ class MonitorService:
             except ValueError:
                 smtp_port = EmailSender.SMTP_PORT
             
-            # 返回配置信息（不包含密码和完整API密钥）
+            # 返回配置信息
             config = {
                 'success': True,
                 'provider': provider,
                 'smtp_server': smtp_server,
                 'smtp_port': smtp_port,
                 'sender_email': sender_email,
-                'is_configured': bool(sender_email and sender_email != 'your_email@outlook.com'),
-                'has_sendgrid': bool(sendgrid_api_key and sendgrid_api_key != 'your_sendgrid_api_key_here'),
-                'has_mailgun': bool(mailgun_api_key and mailgun_api_key != 'your_mailgun_api_key_here'),
-                'mailgun_domain': mailgun_domain if mailgun_domain != 'your_mailgun_domain_here' else ''
+                'is_configured': bool(sender_email and sender_email != 'your_email@outlook.com')
             }
-            
-            # 安全地显示API密钥部分（仅显示前4个字符）
-            if sendgrid_api_key and len(sendgrid_api_key) > 4:
-                config['sendgrid_api_key_preview'] = sendgrid_api_key[:4] + '...'
-            else:
-                config['sendgrid_api_key_preview'] = ''
-                
-            if mailgun_api_key and len(mailgun_api_key) > 4:
-                config['mailgun_api_key_preview'] = mailgun_api_key[:4] + '...'
-            else:
-                config['mailgun_api_key_preview'] = ''
             
             return config
         except Exception as e:

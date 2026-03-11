@@ -185,9 +185,9 @@ python diagnose_network.py
 - **错误**：SMTP 连接失败
 - **解决**：Wispbyte 可能限制出站 SMTP 连接
 - **操作**：
-  - 使用 SendGrid 或 Mailgun 等邮件 API
-  - 调整 `EMAIL_PROVIDER` 为 `sendgrid`
-  - 配置相应的 API 密钥
+  - 检查 SMTP 服务器配置是否正确
+  - 确认端口 587 或 465 是否被 Wispbyte 防火墙允许
+  - 尝试使用不同的 SMTP 服务器（如 smtp.163.com 或 smtp.qq.com）
 
 #### 5. 网络连接失败
 - **错误**：`Connection refused` 或 `Network unreachable`

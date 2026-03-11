@@ -3,33 +3,15 @@
 邮件发送模块
 用于发送新报告的通知邮件
 
-支持多种邮件发送方式：
-1. SMTP协议（传统方式，但在PythonAnywhere免费版中受限）
-2. HTTP API（推荐用于PythonAnywhere，使用SendGrid/Mailgun等第三方服务）
+支持SMTP协议发送邮件
 
 配置方式（通过环境变量）：
-A. SMTP模式（传统方式）：
    - EMAIL_PROVIDER=smtp （或留空，默认）
    - SMTP_SERVER: SMTP服务器地址（默认：smtp.office365.com）
    - SMTP_PORT: SMTP端口（默认：587）
    - SENDER_EMAIL: 发件人邮箱
    - SENDER_PASSWORD: 发件人SMTP授权码
    - RECIPIENT_EMAILS: 收件人邮箱，多个用逗号分隔
-
-B. SendGrid API模式（推荐用于PythonAnywhere）：
-   - EMAIL_PROVIDER=sendgrid
-   - SENDGRID_API_KEY: SendGrid API密钥
-   - SENDER_EMAIL: 发件人邮箱（需在SendGrid中验证）
-   - RECIPIENT_EMAILS: 收件人邮箱，多个用逗号分隔
-
-C. Mailgun API模式：
-   - EMAIL_PROVIDER=mailgun
-   - MAILGUN_API_KEY: Mailgun API密钥
-   - MAILGUN_DOMAIN: Mailgun域名
-   - SENDER_EMAIL: 发件人邮箱
-   - RECIPIENT_EMAILS: 收件人邮箱，多个用逗号分隔
-
-注意：对于PythonAnywhere免费版，建议使用SendGrid API（每月100封免费邮件）
 """
 
 import logging
@@ -41,7 +23,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import List, Dict, Optional, Union
 import os
-import requests
 
 logger = logging.getLogger(__name__)
 
@@ -71,23 +52,18 @@ if os.path.exists(env_path):
         logger.warning(f"加载 .env 文件失败: {e}")
 
 class EmailSender:
-    """邮件发送器类（支持SMTP和HTTP API）"""
+    """邮件发送器类（支持SMTP）"""
     
-    # 邮件发送提供商配置
-    EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "smtp").lower()  # smtp, sendgrid, mailgun
+    # 邮件发送提供商配置（仅支持SMTP）
+    EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "smtp").lower()  # 仅支持smtp
     
-    # SMTP配置 - 仅当EMAIL_PROVIDER=smtp时使用
+    # SMTP配置
     SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.office365.com")
     SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
     
-    # 发件人配置 - 所有模式通用
+    # 发件人配置
     SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "")
-    SENDER_PASSWORD = os.environ.get("SENDER_PASSWORD", "")  # 用于SMTP模式
-    
-    # API密钥配置 - 用于HTTP API模式
-    SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
-    MAILGUN_API_KEY = os.environ.get("MAILGUN_API_KEY", "")
-    MAILGUN_DOMAIN = os.environ.get("MAILGUN_DOMAIN", "")
+    SENDER_PASSWORD = os.environ.get("SENDER_PASSWORD", "")  # SMTP授权码
     
     # 收件人配置 - 所有模式通用
     DEFAULT_RECIPIENT_EMAILS = os.environ.get("RECIPIENT_EMAILS", "")
@@ -98,20 +74,16 @@ class EmailSender:
     
     def __init__(self, provider: str = None, smtp_server: str = None, smtp_port: int = None,
                  sender_email: str = None, sender_password: str = None,
-                 sendgrid_api_key: str = None, mailgun_api_key: str = None, mailgun_domain: str = None,
                  recipient_emails: List[str] = None):
         """
         初始化邮件发送器
         
         Args:
-            provider: 邮件发送提供商 (smtp, sendgrid, mailgun)
-            smtp_server: SMTP服务器地址（仅provider=smtp时使用）
-            smtp_port: SMTP端口（仅provider=smtp时使用）
+            provider: 邮件发送提供商 (仅支持smtp)
+            smtp_server: SMTP服务器地址
+            smtp_port: SMTP端口
             sender_email: 发件人邮箱
-            sender_password: 发件人密码/授权码（仅provider=smtp时使用）
-            sendgrid_api_key: SendGrid API密钥（仅provider=sendgrid时使用）
-            mailgun_api_key: Mailgun API密钥（仅provider=mailgun时使用）
-            mailgun_domain: Mailgun域名（仅provider=mailgun时使用）
+            sender_password: 发件人SMTP授权码
             recipient_emails: 收件人邮箱列表
         """
         self.provider = provider or self.EMAIL_PROVIDER
@@ -119,22 +91,14 @@ class EmailSender:
         self.smtp_port = smtp_port or self.SMTP_PORT
         self.sender_email = sender_email or self.SENDER_EMAIL
         self.sender_password = sender_password or self.SENDER_PASSWORD
-        self.sendgrid_api_key = sendgrid_api_key or self.SENDGRID_API_KEY
-        self.mailgun_api_key = mailgun_api_key or self.MAILGUN_API_KEY
-        self.mailgun_domain = mailgun_domain or self.MAILGUN_DOMAIN
         self.recipient_emails = recipient_emails or self.RECIPIENT_EMAILS
         
         # 验证必要的配置
         self._validate_config()
         
-        logger.info(f"邮件发送器初始化完成 - 提供商: {self.provider}")
-        if self.provider == "smtp":
-            logger.info(f"SMTP服务器: {self.smtp_server}:{self.smtp_port}")
-            logger.info(f"发件人: {self.sender_email}")
-        elif self.provider == "sendgrid":
-            logger.info(f"SendGrid API - 发件人: {self.sender_email}")
-        elif self.provider == "mailgun":
-            logger.info(f"Mailgun API - 发件人: {self.sender_email}, 域名: {self.mailgun_domain}")
+        logger.info(f"邮件发送器初始化完成")
+        logger.info(f"SMTP服务器: {self.smtp_server}:{self.smtp_port}")
+        logger.info(f"发件人: {self.sender_email}")
         logger.info(f"收件人: {self.recipient_emails}")
     
     def send_report_notification(self, title: str, url: str, source_website: str) -> bool:
@@ -302,7 +266,7 @@ class EmailSender:
     
     def _send_email(self, message: MIMEMultipart) -> bool:
         """
-        实际发送邮件（分发器）
+        实际发送邮件
         
         Args:
             message: 邮件消息对象
@@ -310,17 +274,7 @@ class EmailSender:
         Returns:
             bool: 发送是否成功
         """
-        provider = self.provider.lower()
-        
-        if provider == "smtp":
-            return self._send_email_smtp(message)
-        elif provider == "sendgrid":
-            return self._send_email_sendgrid(message)
-        elif provider == "mailgun":
-            return self._send_email_mailgun(message)
-        else:
-            logger.error(f"不支持的邮件提供商: {provider}")
-            return False
+        return self._send_email_smtp(message)
     
     def _send_email_smtp(self, message: MIMEMultipart) -> bool:
         """
@@ -392,209 +346,54 @@ class EmailSender:
             logger.error(f"SMTP发送邮件失败: {e}")
             return False
     
-    def _send_email_sendgrid(self, message: MIMEMultipart) -> bool:
-        """
-        使用SendGrid API发送邮件
-        
-        Args:
-            message: 邮件消息对象
-            
-        Returns:
-            bool: 发送是否成功
-        """
-        try:
-            # 从MIME消息中提取必要信息
-            subject = message["Subject"]
-            from_email = message["From"]
-            to_emails = message["To"]
-            
-            # 提取纯文本内容
-            plain_text_content = ""
-            if message.is_multipart():
-                for part in message.walk():
-                    if part.get_content_type() == "text/plain":
-                        plain_text_content = part.get_payload(decode=True).decode('utf-8')
-                        break
-            else:
-                plain_text_content = message.get_payload(decode=True).decode('utf-8')
-            
-            # 构建SendGrid API请求
-            url = "https://api.sendgrid.com/v3/mail/send"
-            headers = {
-                "Authorization": f"Bearer {self.sendgrid_api_key}",
-                "Content-Type": "application/json"
-            }
-            
-            # 构建请求体
-            data = {
-                "personalizations": [{
-                    "to": [{"email": email.strip()} for email in to_emails.split(",")],
-                    "subject": subject
-                }],
-                "from": {"email": from_email},
-                "content": [{
-                    "type": "text/plain",
-                    "value": plain_text_content
-                }]
-            }
-            
-            # 发送请求
-            response = requests.post(url, headers=headers, json=data, timeout=30)
-            
-            if response.status_code == 202:
-                logger.debug("SendGrid邮件发送成功")
-                return True
-            else:
-                logger.error(f"SendGrid API错误: {response.status_code} - {response.text}")
-                return False
-                
-        except requests.exceptions.RequestException as e:
-            logger.error(f"SendGrid API请求失败: {e}")
-            return False
-        except Exception as e:
-            logger.error(f"SendGrid发送邮件失败: {e}")
-            return False
-    
-    def _send_email_mailgun(self, message: MIMEMultipart) -> bool:
-        """
-        使用Mailgun API发送邮件
-        
-        Args:
-            message: 邮件消息对象
-            
-        Returns:
-            bool: 发送是否成功
-        """
-        try:
-            # 从MIME消息中提取必要信息
-            subject = message["Subject"]
-            from_email = message["From"]
-            to_emails = message["To"]
-            
-            # 提取纯文本内容
-            plain_text_content = ""
-            if message.is_multipart():
-                for part in message.walk():
-                    if part.get_content_type() == "text/plain":
-                        plain_text_content = part.get_payload(decode=True).decode('utf-8')
-                        break
-            else:
-                plain_text_content = message.get_payload(decode=True).decode('utf-8')
-            
-            # 构建Mailgun API请求
-            url = f"https://api.mailgun.net/v3/{self.mailgun_domain}/messages"
-            auth = ("api", self.mailgun_api_key)
-            
-            # 构建表单数据
-            data = {
-                "from": from_email,
-                "to": to_emails,
-                "subject": subject,
-                "text": plain_text_content
-            }
-            
-            # 发送请求
-            response = requests.post(url, auth=auth, data=data, timeout=30)
-            
-            if response.status_code == 200:
-                logger.debug("Mailgun邮件发送成功")
-                return True
-            else:
-                logger.error(f"Mailgun API错误: {response.status_code} - {response.text}")
-                return False
-                
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Mailgun API请求失败: {e}")
-            return False
-        except Exception as e:
-            logger.error(f"Mailgun发送邮件失败: {e}")
-            return False
+
     
     def _validate_config(self):
         """
-        验证邮件配置是否完整（根据提供商类型）
+        验证邮件配置是否完整
         
         检查必要的环境变量是否设置，如果未设置则记录警告。
         注意：这里只记录警告，不抛出异常，因为配置可能在后续通过其他方式设置。
         """
         missing_configs = []
-        provider = self.provider.lower()
         
-        # 检查发件人配置（所有提供商都需要）
+        # 检查发件人配置
         if not self.sender_email:
             missing_configs.append("SENDER_EMAIL")
             logger.warning("发件人邮箱未设置，请通过环境变量 SENDER_EMAIL 设置")
         
-        # 检查收件人配置（所有提供商都需要）
+        # 检查收件人配置
         if not self.recipient_emails:
             missing_configs.append("RECIPIENT_EMAILS")
             logger.warning("收件人邮箱未设置，邮件将无法发送。请通过环境变量 RECIPIENT_EMAILS 设置")
         
-        # 根据提供商检查特定配置
-        if provider == "smtp":
-            if not self.sender_password:
-                missing_configs.append("SENDER_PASSWORD")
-                logger.warning("发件人SMTP授权码未设置，请通过环境变量 SENDER_PASSWORD 设置")
-            
-            if not self.smtp_server:
-                missing_configs.append("SMTP_SERVER")
-                logger.warning("SMTP服务器地址未设置，使用默认值: smtp.office365.com")
-                self.smtp_server = "smtp.office365.com"
-            
-            if not self.smtp_port:
-                missing_configs.append("SMTP_PORT")
-                logger.warning("SMTP端口未设置，使用默认值: 587")
-                self.smtp_port = 587
+        # 检查SMTP配置
+        if not self.sender_password:
+            missing_configs.append("SENDER_PASSWORD")
+            logger.warning("发件人SMTP授权码未设置，请通过环境变量 SENDER_PASSWORD 设置")
         
-        elif provider == "sendgrid":
-            if not self.sendgrid_api_key:
-                missing_configs.append("SENDGRID_API_KEY")
-                logger.warning("SendGrid API密钥未设置，请通过环境变量 SENDGRID_API_KEY 设置")
+        if not self.smtp_server:
+            missing_configs.append("SMTP_SERVER")
+            logger.warning("SMTP服务器地址未设置，使用默认值: smtp.office365.com")
+            self.smtp_server = "smtp.office365.com"
         
-        elif provider == "mailgun":
-            if not self.mailgun_api_key:
-                missing_configs.append("MAILGUN_API_KEY")
-                logger.warning("Mailgun API密钥未设置，请通过环境变量 MAILGUN_API_KEY 设置")
-            
-            if not self.mailgun_domain:
-                missing_configs.append("MAILGUN_DOMAIN")
-                logger.warning("Mailgun域名未设置，请通过环境变量 MAILGUN_DOMAIN 设置")
-        
-        else:
-            logger.warning(f"不支持的邮件提供商: {provider}，支持的值: smtp, sendgrid, mailgun")
-            logger.warning("将使用默认的smtp提供商")
-            self.provider = "smtp"
-            # 重新验证SMTP配置
-            if not self.sender_password:
-                missing_configs.append("SENDER_PASSWORD")
-                logger.warning("发件人SMTP授权码未设置，请通过环境变量 SENDER_PASSWORD 设置")
+        if not self.smtp_port:
+            missing_configs.append("SMTP_PORT")
+            logger.warning("SMTP端口未设置，使用默认值: 587")
+            self.smtp_port = 587
         
         if missing_configs:
             logger.warning(f"缺少以下配置项: {', '.join(missing_configs)}")
             logger.warning("可以通过以下方式设置:")
             logger.warning("1. 设置环境变量 (推荐):")
-            
-            if provider == "smtp":
-                logger.warning("   export EMAIL_PROVIDER='smtp'")
-                logger.warning("   export SENDER_EMAIL='your_email@example.com'")
-                logger.warning("   export SENDER_PASSWORD='your_smtp_password'")
-                logger.warning("   export RECIPIENT_EMAILS='recipient1@example.com,recipient2@example.com'")
-            elif provider == "sendgrid":
-                logger.warning("   export EMAIL_PROVIDER='sendgrid'")
-                logger.warning("   export SENDGRID_API_KEY='your_sendgrid_api_key'")
-                logger.warning("   export SENDER_EMAIL='your_verified_email@example.com'")
-                logger.warning("   export RECIPIENT_EMAILS='recipient1@example.com,recipient2@example.com'")
-            elif provider == "mailgun":
-                logger.warning("   export EMAIL_PROVIDER='mailgun'")
-                logger.warning("   export MAILGUN_API_KEY='your_mailgun_api_key'")
-                logger.warning("   export MAILGUN_DOMAIN='your_mailgun_domain'")
-                logger.warning("   export SENDER_EMAIL='your_email@example.com'")
-                logger.warning("   export RECIPIENT_EMAILS='recipient1@example.com,recipient2@example.com'")
-            
+            logger.warning("   export EMAIL_PROVIDER='smtp'")
+            logger.warning("   export SENDER_EMAIL='your_email@example.com'")
+            logger.warning("   export SENDER_PASSWORD='your_smtp_password'")
+            logger.warning("   export RECIPIENT_EMAILS='recipient1@example.com,recipient2@example.com'")
             logger.warning("2. 在创建EmailSender实例时传递参数")
             logger.warning("3. 创建.env文件并在其中设置环境变量")
         else:
-            logger.debug(f"邮件配置验证通过 - 提供商: {provider}")
+            logger.debug("邮件配置验证通过")
     
     def _get_current_time(self) -> str:
         """获取当前时间字符串"""
@@ -603,23 +402,12 @@ class EmailSender:
     
     def test_connection(self) -> tuple[bool, str]:
         """
-        测试邮件服务连接（支持多提供商）
+        测试邮件服务连接
         
         Returns:
             tuple[bool, str]: (连接是否成功, 错误信息或空字符串)
         """
-        provider = self.provider.lower()
-        
-        if provider == "smtp":
-            return self._test_smtp_connection()
-        elif provider == "sendgrid":
-            return self._test_sendgrid_connection()
-        elif provider == "mailgun":
-            return self._test_mailgun_connection()
-        else:
-            error_msg = f"不支持的邮件提供商: {provider}"
-            logger.error(error_msg)
-            return False, error_msg
+        return self._test_smtp_connection()
     
     def _test_smtp_connection(self) -> tuple[bool, str]:
         """
@@ -694,107 +482,7 @@ class EmailSender:
             logger.error(error_msg)
             return False, error_msg
     
-    def _test_sendgrid_connection(self) -> tuple[bool, str]:
-        """
-        测试SendGrid API连接
-        
-        Returns:
-            tuple[bool, str]: (连接是否成功, 错误信息或空字符串)
-        """
-        if not self.sendgrid_api_key:
-            error_msg = "无法测试SendGrid连接：API密钥未设置。请通过环境变量 SENDGRID_API_KEY 设置。"
-            logger.error(error_msg)
-            return False, error_msg
-        
-        if not self.sender_email:
-            error_msg = "无法测试SendGrid连接：发件人邮箱未设置。请通过环境变量 SENDER_EMAIL 设置。"
-            logger.error(error_msg)
-            return False, error_msg
-        
-        try:
-            # 测试SendGrid API连接（通过获取用户信息）
-            url = "https://api.sendgrid.com/v3/user/profile"
-            headers = {
-                "Authorization": f"Bearer {self.sendgrid_api_key}",
-                "Content-Type": "application/json"
-            }
-            
-            response = requests.get(url, headers=headers, timeout=30)
-            
-            if response.status_code == 200:
-                logger.info("SendGrid API连接测试成功")
-                return True, ""
-            elif response.status_code == 401:
-                error_msg = "SendGrid API认证失败：API密钥无效。请检查SENDGRID_API_KEY是否正确。"
-                logger.error(error_msg)
-                return False, error_msg
-            else:
-                error_msg = f"SendGrid API连接测试失败: {response.status_code} - {response.text}"
-                logger.error(error_msg)
-                return False, error_msg
-                
-        except requests.exceptions.RequestException as e:
-            error_msg = f"SendGrid API请求失败: {str(e)}"
-            logger.error(error_msg)
-            return False, error_msg
-        except Exception as e:
-            error_msg = f"SendGrid连接测试失败: {str(e)}"
-            logger.error(error_msg)
-            return False, error_msg
-    
-    def _test_mailgun_connection(self) -> tuple[bool, str]:
-        """
-        测试Mailgun API连接
-        
-        Returns:
-            tuple[bool, str]: (连接是否成功, 错误信息或空字符串)
-        """
-        if not self.mailgun_api_key:
-            error_msg = "无法测试Mailgun连接：API密钥未设置。请通过环境变量 MAILGUN_API_KEY 设置。"
-            logger.error(error_msg)
-            return False, error_msg
-        
-        if not self.mailgun_domain:
-            error_msg = "无法测试Mailgun连接：域名未设置。请通过环境变量 MAILGUN_DOMAIN 设置。"
-            logger.error(error_msg)
-            return False, error_msg
-        
-        if not self.sender_email:
-            error_msg = "无法测试Mailgun连接：发件人邮箱未设置。请通过环境变量 SENDER_EMAIL 设置。"
-            logger.error(error_msg)
-            return False, error_msg
-        
-        try:
-            # 测试Mailgun API连接（通过获取域名信息）
-            url = f"https://api.mailgun.net/v3/domains/{self.mailgun_domain}"
-            auth = ("api", self.mailgun_api_key)
-            
-            response = requests.get(url, auth=auth, timeout=30)
-            
-            if response.status_code == 200:
-                logger.info("Mailgun API连接测试成功")
-                return True, ""
-            elif response.status_code == 401:
-                error_msg = "Mailgun API认证失败：API密钥无效。请检查MAILGUN_API_KEY是否正确。"
-                logger.error(error_msg)
-                return False, error_msg
-            elif response.status_code == 404:
-                error_msg = f"Mailgun域名不存在: {self.mailgun_domain}。请检查MAILGUN_DOMAIN是否正确。"
-                logger.error(error_msg)
-                return False, error_msg
-            else:
-                error_msg = f"Mailgun API连接测试失败: {response.status_code} - {response.text}"
-                logger.error(error_msg)
-                return False, error_msg
-                
-        except requests.exceptions.RequestException as e:
-            error_msg = f"Mailgun API请求失败: {str(e)}"
-            logger.error(error_msg)
-            return False, error_msg
-        except Exception as e:
-            error_msg = f"Mailgun连接测试失败: {str(e)}"
-            logger.error(error_msg)
-            return False, error_msg
+
 
 
 def get_smtp_config_instructions():
