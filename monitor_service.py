@@ -767,7 +767,8 @@ class MonitorService:
                     'error': '无法创建监控器，邮件发送失败'
                 }
             
-            # 获取最近2小时内未发送的报告
+            # 获取最近2小时内未发送的报告，但排除最近5分钟内发现的报告，避免与正在进行的邮件发送冲突
+            from datetime import datetime, timedelta
             with DatabaseManager(self.db_path) as db:
                 unsent_reports = db.get_unsent_reports(hours=2)
                 
@@ -777,6 +778,38 @@ class MonitorService:
                     'message': '没有未发送的报告',
                     'sent_count': 0
                 }
+            
+            # 过滤掉最近5分钟内发现的报告
+            five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
+            filtered_reports = []
+            for report in unsent_reports:
+                try:
+                    discovered_str = report.get('discovered_time')
+                    if discovered_str:
+                        if 'T' in discovered_str:
+                            discovered_time = datetime.fromisoformat(discovered_str.replace('Z', '+00:00'))
+                        else:
+                            discovered_time = datetime.strptime(discovered_str, '%Y-%m-%d %H:%M:%S')
+                        
+                        # 如果报告发现时间在5分钟以前，才包含
+                        if discovered_time < five_minutes_ago:
+                            filtered_reports.append(report)
+                        else:
+                            logger.debug(f"跳过最近发现的报告（避免重复发送）: {report.get('title', 'Unknown')}")
+                    else:
+                        filtered_reports.append(report)
+                except (ValueError, KeyError) as e:
+                    logger.warning(f"解析报告发现时间失败 {report.get('id', 'unknown')}: {e}")
+                    filtered_reports.append(report)  # 无法解析时间，包含以防万一
+            
+            if not filtered_reports:
+                return {
+                    'success': True,
+                    'message': '过滤后没有未发送的报告（可能都是最近5分钟内发现的）',
+                    'sent_count': 0
+                }
+            
+            unsent_reports = filtered_reports
             
             sent_count = 0
             failed_count = 0

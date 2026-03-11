@@ -216,9 +216,28 @@ class WebsiteMonitor:
                                 )
                                 
                                 if email_success:
-                                    # 标记报告为已发送
-                                    db.mark_report_as_sent(report_id)
-                                    logger.info(f"邮件通知发送成功: {title}")
+                                    # 标记报告为已发送，添加重试机制确保原子性
+                                    max_retries = 3
+                                    marked = False
+                                    for retry in range(max_retries):
+                                        try:
+                                            db.mark_report_as_sent(report_id)
+                                            marked = True
+                                            logger.info(f"邮件通知发送成功并标记为已发送: {title}")
+                                            break
+                                        except Exception as mark_error:
+                                            if retry < max_retries - 1:
+                                                logger.warning(f"标记报告为已发送失败（重试 {retry+1}/{max_retries}）: {mark_error}")
+                                                import time
+                                                time.sleep(1)  # 等待1秒后重试
+                                            else:
+                                                logger.error(f"标记报告为已发送失败（已达最大重试次数）: {mark_error}")
+                                                # 即使标记失败，也记录邮件已发送，避免重复发送
+                                                logger.error(f"报告 {report_id} 邮件已发送但标记失败，需手动处理")
+                                    
+                                    if not marked:
+                                        # 记录严重错误，但不要尝试重新发送邮件，因为用户可能已收到
+                                        logger.error(f"严重：报告 {report_id} 邮件发送成功但无法标记为已发送，可能导致重复发送")
                                 else:
                                     logger.warning(f"邮件通知发送失败: {title}")
                             except Exception as e:
@@ -359,15 +378,44 @@ class WebsiteMonitor:
             return 0
         
         try:
+            from datetime import datetime, timedelta
             with DatabaseManager(self.db_path) as db:
-                # 获取最近2小时内未发送的报告
+                # 获取最近2小时内未发送的报告，但排除最近5分钟内发现的报告，避免与正在进行的邮件发送冲突
                 unsent_reports = db.get_unsent_reports(hours=2)
                 
                 if not unsent_reports:
                     logger.info("没有未发送的报告")
                     return 0
                 
-                logger.info(f"找到 {len(unsent_reports)} 个最近2小时内未发送的报告，开始发送邮件通知...")
+                # 过滤掉最近5分钟内发现的报告
+                five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
+                filtered_reports = []
+                for report in unsent_reports:
+                    try:
+                        discovered_str = report.get('discovered_time')
+                        if discovered_str:
+                            if 'T' in discovered_str:
+                                discovered_time = datetime.fromisoformat(discovered_str.replace('Z', '+00:00'))
+                            else:
+                                discovered_time = datetime.strptime(discovered_str, '%Y-%m-%d %H:%M:%S')
+                            
+                            # 如果报告发现时间在5分钟以前，才包含
+                            if discovered_time < five_minutes_ago:
+                                filtered_reports.append(report)
+                            else:
+                                logger.debug(f"跳过最近发现的报告（避免重复发送）: {report.get('title', 'Unknown')}")
+                        else:
+                            filtered_reports.append(report)
+                    except (ValueError, KeyError) as e:
+                        logger.warning(f"解析报告发现时间失败 {report.get('id', 'unknown')}: {e}")
+                        filtered_reports.append(report)  # 无法解析时间，包含以防万一
+                
+                if not filtered_reports:
+                    logger.info("过滤后没有未发送的报告（可能都是最近5分钟内发现的）")
+                    return 0
+                
+                logger.info(f"找到 {len(filtered_reports)} 个未发送的报告（已排除最近5分钟内发现的报告），开始发送邮件通知...")
+                unsent_reports = filtered_reports
                 
                 success_count = 0
                 
@@ -687,9 +735,28 @@ class MultiWebsiteMonitor:
                                 )
                                 
                                 if email_success:
-                                    # 标记报告为已发送
-                                    db.mark_report_as_sent(report_id)
-                                    logger.info(f"邮件通知发送成功: {title}")
+                                    # 标记报告为已发送，添加重试机制确保原子性
+                                    max_retries = 3
+                                    marked = False
+                                    for retry in range(max_retries):
+                                        try:
+                                            db.mark_report_as_sent(report_id)
+                                            marked = True
+                                            logger.info(f"邮件通知发送成功并标记为已发送: {title}")
+                                            break
+                                        except Exception as mark_error:
+                                            if retry < max_retries - 1:
+                                                logger.warning(f"标记报告为已发送失败（重试 {retry+1}/{max_retries}）: {mark_error}")
+                                                import time
+                                                time.sleep(1)  # 等待1秒后重试
+                                            else:
+                                                logger.error(f"标记报告为已发送失败（已达最大重试次数）: {mark_error}")
+                                                # 即使标记失败，也记录邮件已发送，避免重复发送
+                                                logger.error(f"报告 {report_id} 邮件已发送但标记失败，需手动处理")
+                                    
+                                    if not marked:
+                                        # 记录严重错误，但不要尝试重新发送邮件，因为用户可能已收到
+                                        logger.error(f"严重：报告 {report_id} 邮件发送成功但无法标记为已发送，可能导致重复发送")
                                 else:
                                     logger.warning(f"邮件通知发送失败: {title}")
                             except Exception as e:
@@ -843,14 +910,44 @@ class MultiWebsiteMonitor:
         
         try:
             from db import DatabaseManager
+            from datetime import datetime, timedelta
             with DatabaseManager(self.db_path) as db:
+                # 获取未发送报告，但排除最近5分钟内发现的报告，避免与正在进行的邮件发送冲突
                 unsent_reports = db.get_unsent_reports(hours=2)
                 
                 if not unsent_reports:
                     logger.info("没有未发送的报告")
                     return 0
                 
-                logger.info(f"找到 {len(unsent_reports)} 个最近2小时内未发送的报告，开始发送邮件通知...")
+                # 过滤掉最近5分钟内发现的报告
+                five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
+                filtered_reports = []
+                for report in unsent_reports:
+                    try:
+                        discovered_str = report.get('discovered_time')
+                        if discovered_str:
+                            if 'T' in discovered_str:
+                                discovered_time = datetime.fromisoformat(discovered_str.replace('Z', '+00:00'))
+                            else:
+                                discovered_time = datetime.strptime(discovered_str, '%Y-%m-%d %H:%M:%S')
+                            
+                            # 如果报告发现时间在5分钟以前，才包含
+                            if discovered_time < five_minutes_ago:
+                                filtered_reports.append(report)
+                            else:
+                                logger.debug(f"跳过最近发现的报告（避免重复发送）: {report.get('title', 'Unknown')}")
+                        else:
+                            filtered_reports.append(report)
+                    except (ValueError, KeyError) as e:
+                        logger.warning(f"解析报告发现时间失败 {report.get('id', 'unknown')}: {e}")
+                        filtered_reports.append(report)  # 无法解析时间，包含以防万一
+                
+                if not filtered_reports:
+                    logger.info("过滤后没有未发送的报告（可能都是最近5分钟内发现的）")
+                    return 0
+                
+                logger.info(f"找到 {len(filtered_reports)} 个未发送的报告（已排除最近5分钟内发现的报告），开始发送邮件通知...")
+                unsent_reports = filtered_reports
                 
                 success_count = 0
                 
