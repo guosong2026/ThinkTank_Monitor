@@ -1,0 +1,39 @@
+{
+  "project": {
+    "name": "ThinkTank_Monitor",
+    "type": "python-web-monitoring",
+    "description": "智库网站监测系统，自动监测指定智库网站的新报告并发送邮件通知",
+    "version": "1.0.0",
+    "root": "D:\\TRAE\\ThinkTank_Monitor"
+  },
+  "trae": {
+    "bound": true,
+    "binding_date": "2026-03-11",
+    "integrated_skills": ["ui-ux-pro-max"],
+    "environment": "windows",
+    "ide_support": true
+  },
+  "ui_ux": {
+    "enhancement_tool": "uipro-cli",
+    "installed": false,
+    "configuration": {
+      "theme": "modern",
+      "color_scheme": "blue",
+      "font_family": "system-ui",
+      "responsive_design": true,
+      "animations": "subtle"
+    },
+    "planned_enhancements": [
+      "改进监控页面布局",
+      "优化报告列表显示",
+      "添加可视化图表",
+      "增强设置页面用户体验"
+    ]
+  },
+  "dependencies": {
+    "node_js_required": true,
+    "npm_packages": ["uipro-cli"],
+    "python_packages": ["flask", "requests", "beautifulsoup4", "sqlite3"]
+  },
+  "notes": "UI-UX-Pro-Max-Skill已创建，待安装uipro-cli工具后即可开始UI美化工作。"
+}
