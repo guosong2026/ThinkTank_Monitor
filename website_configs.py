@@ -1049,6 +1049,7 @@ def ecologic_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     页面使用article元素
     """
     from bs4 import BeautifulSoup
+    import re
     
     if not html_content:
         return []
@@ -1078,6 +1079,107 @@ def ecologic_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
         
         return False
     
+    # 辅助函数：从元素及其附近提取发布日期
+    def extract_date_from_element(element) -> str:
+        """从元素及其父元素中提取发布日期"""
+        if not element:
+            return None
+        
+        # 首先在元素内部查找日期元素
+        date_selectors = [
+            'time',
+            '.date',
+            '.published',
+            '.publication-date',
+            '.post-date',
+            '.entry-date',
+            'span.date',
+            'span.published'
+        ]
+        
+        for selector in date_selectors:
+            date_elem = element.find(selector)
+            if date_elem:
+                date_text = date_elem.get_text(strip=True)
+                if date_text:
+                    # 尝试解析日期文本
+                    date = parse_date_text(date_text)
+                    if date:
+                        return date
+        
+        # 如果没找到，向上查找父元素中的日期
+        parent = element.parent
+        for _ in range(3):  # 向上查找3层
+            if parent is None:
+                break
+            for selector in date_selectors:
+                date_elem = parent.find(selector)
+                if date_elem:
+                    date_text = date_elem.get_text(strip=True)
+                    if date_text:
+                        date = parse_date_text(date_text)
+                        if date:
+                            return date
+            parent = parent.parent
+        
+        # 最后，在元素的文本中查找日期模式
+        element_text = element.get_text()
+        date_patterns = [
+            r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}',
+            r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},\s+\d{4}',
+            r'\d{4}-\d{2}-\d{2}',
+            r'\d{1,2}/\d{1,2}/\d{4}',
+            r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}',
+        ]
+        
+        for pattern in date_patterns:
+            match = re.search(pattern, element_text, re.IGNORECASE)
+            if match:
+                date_text = match.group(0)
+                date = parse_date_text(date_text)
+                if date:
+                    return date
+        
+        return None
+    
+    # 辅助函数：解析日期文本为YYYY-MM-DD格式
+    def parse_date_text(date_text: str) -> str:
+        """解析日期文本，返回YYYY-MM-DD格式字符串"""
+        from datetime import datetime
+        import re
+        
+        if not date_text:
+            return None
+        
+        # 移除多余空白
+        date_text = ' '.join(date_text.split())
+        
+        # 尝试常见日期格式
+        date_formats = [
+            '%B %d, %Y',    # January 27, 2025
+            '%b %d, %Y',    # Jan 27, 2025
+            '%Y-%m-%d',     # 2025-01-27
+            '%m/%d/%Y',     # 01/27/2025
+            '%d/%m/%Y',     # 27/01/2025
+            '%B %Y',        # January 2025
+        ]
+        
+        for fmt in date_formats:
+            try:
+                dt = datetime.strptime(date_text, fmt)
+                return dt.strftime('%Y-%m-%d')
+            except ValueError:
+                continue
+        
+        # 尝试匹配年份模式
+        year_match = re.search(r'\b(20\d{2})\b', date_text)
+        if year_match:
+            year = year_match.group(1)
+            # 如果没有月份和日期，使用年份-01-01作为近似值
+            return f"{year}-01-01"
+        
+        return None
+    
     # Ecologic特定选择器（基于分析）
     selectors = [
         'article a',
@@ -1104,10 +1206,14 @@ def ecologic_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
                     full_url = urljoin(base_url, href)
                     # 排除导航链接
                     if not is_navigation_link(full_url, title):
+                        # 尝试提取发布日期
+                        publish_date = extract_date_from_element(link)
+                        
                         reports.append({
                             'title': title,
                             'url': full_url,
-                            'source': 'Ecologic Institute'
+                            'source': 'Ecologic Institute',
+                            'publish_date': publish_date
                         })
             break
     
@@ -1121,10 +1227,14 @@ def ecologic_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
             if href and title and len(title) > 15:
                 full_url = urljoin(base_url, href)
                 if not is_navigation_link(full_url, title):
+                    # 尝试提取发布日期
+                    publish_date = extract_date_from_element(link)
+                    
                     reports.append({
                         'title': title,
                         'url': full_url,
-                        'source': 'Ecologic Institute'
+                        'source': 'Ecologic Institute',
+                        'publish_date': publish_date
                     })
     
     # 去重

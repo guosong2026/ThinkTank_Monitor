@@ -175,6 +175,25 @@ class WebsiteMonitor:
                     # 尝试插入数据库
                     # 尝试从标题中提取发布日期
                     publish_date = self._extract_date_from_title(title)
+                    
+                    # 检查报告是否过旧（超过30天）
+                    MAX_REPORT_AGE_DAYS = 30
+                    skip_old_report = False
+                    if publish_date:
+                        try:
+                            from datetime import datetime
+                            report_date = datetime.strptime(publish_date, '%Y-%m-%d').date()
+                            today = datetime.utcnow().date()
+                            age_days = (today - report_date).days
+                            if age_days > MAX_REPORT_AGE_DAYS:
+                                logger.info(f"跳过旧报告（{age_days}天前）: {title}")
+                                skip_old_report = True
+                        except (ValueError, TypeError) as e:
+                            logger.debug(f"无法解析发布日期 {publish_date}: {e}")
+                    
+                    if skip_old_report:
+                        continue
+                    
                     report_id = db.insert_report(
                         title=title,
                         url=url,
@@ -625,8 +644,27 @@ class MultiWebsiteMonitor:
                     source = report.get('source', config.name)
                     
                     # 插入数据库
-                    # 尝试从标题中提取发布日期
-                    publish_date = self._extract_date_from_title(title)
+                    # 优先使用报告中自带的发布日期，否则从标题中提取
+                    publish_date = report.get('publish_date') or self._extract_date_from_title(title)
+                    
+                    # 检查报告是否过旧（超过30天）
+                    MAX_REPORT_AGE_DAYS = 30
+                    skip_old_report = False
+                    if publish_date:
+                        try:
+                            from datetime import datetime
+                            report_date = datetime.strptime(publish_date, '%Y-%m-%d').date()
+                            today = datetime.utcnow().date()
+                            age_days = (today - report_date).days
+                            if age_days > MAX_REPORT_AGE_DAYS:
+                                logger.info(f"跳过旧报告（{age_days}天前）: {title}")
+                                skip_old_report = True
+                        except (ValueError, TypeError) as e:
+                            logger.debug(f"无法解析发布日期 {publish_date}: {e}")
+                    
+                    if skip_old_report:
+                        continue
+                    
                     report_id = db.insert_report(
                         title=title,
                         url=url,
