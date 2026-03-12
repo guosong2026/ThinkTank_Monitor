@@ -1,223 +1,512 @@
 {% extends "base.html" %}
 
-{% block title %}监控状态{% endblock %}
+{% block title %}仪表板{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <h2 class="mb-4">
-            <i class="fas fa-tachometer-alt me-2"></i>监控状态
-            <span class="loading-spinner ms-2">
-                <i class="fas fa-spinner fa-spin"></i>
-            </span>
-        </h2>
-    </div>
-</div>
-
-<!-- 状态卡片 -->
-<div class="row">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header bg-info text-white">
-                <i class="fas fa-bell me-2"></i>最近活动
+<div class="bento-grid">
+    <!-- 状态概览 -->
+    <div class="bento-card bento-status">
+        <div class="bento-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>监控状态</span>
+        </div>
+        <div class="bento-body">
+            <div class="status-display">
+                <span class="status-dot {% if status.is_running %}active{% else %}inactive{% endif %}"></span>
+                <span class="status-text">{% if status.is_running %}运行中{% else %}已停止{% endif %}</span>
             </div>
-            <div class="card-body">
-                <div id="recent-activity">
-                    <p class="text-muted">加载中...</p>
-                </div>
-                <div class="text-end mt-2">
-                    <a href="/reports" class="btn btn-sm btn-outline-info">查看最近推文</a>
-                </div>
+            <div class="status-detail">
+                {% if status.is_running %}
+                <p>下次检查: {{ status.next_run_time or '即将开始' }}</p>
+                {% else %}
+                <p>点击下方按钮启动监控</p>
+                {% endif %}
             </div>
         </div>
     </div>
-    
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header bg-success text-white">
-                <i class="fas fa-play-circle me-2"></i>控制面板
-            </div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    {% if status.is_running %}
-                    <button id="stop-btn" class="btn btn-danger btn-action">
-                        <i class="fas fa-stop me-2"></i>停止监控
-                    </button>
-                    {% else %}
-                    <button id="start-btn" class="btn btn-success btn-action">
-                        <i class="fas fa-play me-2"></i>开始监控
-                    </button>
-                    {% endif %}
-                    
-                    <button id="run-once-btn" class="btn btn-primary btn-action">
-                        <i class="fas fa-sync-alt me-2"></i>立即检查
-                    </button>
-                    
-                    <button id="send-unsent-btn" class="btn btn-warning btn-action">
-                        <i class="fas fa-paper-plane me-2"></i>发送未发送报告
-                    </button>
-                    
-                    <button id="refresh-btn" class="btn btn-outline-secondary btn-action">
-                        <i class="fas fa-redo me-2"></i>刷新状态
-                    </button>
-                </div>
+
+    <!-- 统计卡片 -->
+    <div class="bento-card bento-stat">
+        <div class="stat-value">{{ status.total_reports or 0 }}</div>
+        <div class="stat-label">总报告数</div>
+    </div>
+
+    <div class="bento-card bento-stat">
+        <div class="stat-value">{{ status.sent_reports or 0 }}</div>
+        <div class="stat-label">已发送</div>
+    </div>
+
+    <div class="bento-card bento-stat">
+        <div class="stat-value">{{ status.unsent_reports or 0 }}</div>
+        <div class="stat-label">待发送</div>
+    </div>
+
+    <!-- 控制面板 -->
+    <div class="bento-card bento-controls">
+        <div class="bento-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span>控制面板</span>
+        </div>
+        <div class="bento-body">
+            <div class="control-buttons">
+                {% if status.is_running %}
+                <button id="stop-btn" class="btn btn-danger">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"></rect></svg>
+                    停止监控
+                </button>
+                {% else %}
+                <button id="start-btn" class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    开始监控
+                </button>
+                {% endif %}
                 
-                <div class="mt-4">
-                    <h6>快速链接</h6>
-                    <div class="list-group">
-                        <a href="/reports" class="list-group-item list-group-item-action">
-                            <i class="fas fa-list me-2"></i>查看报告
-                        </a>
-                        <a href="/settings" class="list-group-item list-group-item-action">
-                            <i class="fas fa-cog me-2"></i>邮箱设置
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 近期报告统计 -->
-<div class="row mt-4">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <i class="fas fa-chart-line me-2"></i>近期报告统计
-                <button id="refresh-stats-btn" class="btn btn-sm btn-outline-light float-end">
-                    <i class="fas fa-redo"></i>
+                <button id="run-once-btn" class="btn btn-outline">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    立即检查
+                </button>
+                
+                <button id="send-unsent-btn" class="btn btn-outline">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    发送待发
                 </button>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-7">
-                        <h6 class="text-center">最近10天新报告数量趋势</h6>
-                        <div class="chart-container">
-                            <canvas id="dailyReportChart"></canvas>
-                        </div>
-                        <div class="text-center mt-2">
-                            <small class="text-muted">每日新发现的报告总数</small>
-                        </div>
-                    </div>
-                    <div class="col-md-5">
-                        <h6 class="text-center">报告来源分布（最近10天）</h6>
-                        <div class="chart-container">
-                            <canvas id="websiteDistributionChart"></canvas>
-                        </div>
-                        <div class="text-center mt-2">
-                            <small class="text-muted">按网站来源统计的报告数量</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-3 text-center">
-                    <small class="text-muted">数据更新时间: <span id="stats-update-time">--:--:--</span></small>
-                </div>
+        </div>
+    </div>
+
+    <!-- 最近活动 -->
+    <div class="bento-card bento-activity">
+        <div class="bento-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <span>最近活动</span>
+            <a href="/reports" class="btn-link">查看全部</a>
+        </div>
+        <div class="bento-body">
+            <div id="recent-activity" class="activity-list">
+                <p class="text-muted">加载中...</p>
             </div>
         </div>
     </div>
-</div>
 
-<!-- 网站状态表格 -->
-<div class="row mt-4">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header bg-secondary text-white">
-                <i class="fas fa-globe me-2"></i>监控网站列表
+    <!-- 统计图表 -->
+    <div class="bento-card bento-chart">
+        <div class="bento-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+            <span>近期趋势</span>
+            <button id="refresh-stats-btn" class="btn-icon" title="刷新">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            </button>
+        </div>
+        <div class="bento-body">
+            <div class="chart-container">
+                <canvas id="dailyReportChart"></canvas>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>网站名称</th>
-                                <th>领域</th>
-                                <th>状态</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="websites-table">
-                            <tr>
-                                <td colspan="4" class="text-center">加载中...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+        </div>
+    </div>
+
+    <!-- 网站列表 -->
+    <div class="bento-card bento-websites">
+        <div class="bento-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+            <span>监控网站</span>
+            <span class="badge-count">{{ status.website_count or 13 }}</span>
+        </div>
+        <div class="bento-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>网站</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="websites-table">
+                        <tr><td colspan="2" class="text-center text-muted">加载中...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
 
 <!-- 智库详情模态框 -->
-<div class="modal fade" id="thinktankModal" tabindex="-1" aria-labelledby="thinktankModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+<div class="modal fade" id="thinktankModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="thinktankModalLabel">智库详情</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-12">
-                        <h4 id="modal-thinktank-name" class="mb-3"></h4>
-                        <div class="mb-3">
-                            <strong>核心领域：</strong>
-                            <span id="modal-thinktank-domain" class="badge bg-primary"></span>
-                        </div>
-                        <div class="mb-3">
-                            <strong>网站链接：</strong>
-                            <a id="modal-thinktank-url" href="#" target="_blank" class="text-decoration-none"></a>
-                        </div>
-                        <div class="card">
-                            <div class="card-header bg-light">
-                                <strong>关于此智库</strong>
-                            </div>
-                            <div class="card-body">
-                                <p id="modal-thinktank-description" class="mb-0"></p>
-                            </div>
-                        </div>
-                    </div>
+                <h4 id="modal-thinktank-name" class="mb-3"></h4>
+                <p><strong>领域：</strong><span id="modal-thinktank-domain" class="badge badge-success"></span></p>
+                <p><strong>链接：</strong><a id="modal-thinktank-url" href="#" target="_blank"></a></p>
+                <div class="mt-3">
+                    <strong>简介：</strong>
+                    <p id="modal-thinktank-description" class="mt-2 text-muted"></p>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-outline" data-bs-dismiss="modal">关闭</button>
                 <a id="modal-thinktank-visit-btn" href="#" target="_blank" class="btn btn-primary">访问网站</a>
             </div>
         </div>
     </div>
 </div>
-
 {% endblock %}
 
+{% block extra_css %}
 <style>
-.chart-container {
-    position: relative;
-    height: 250px;
-    width: 100%;
-}
-@media (max-width: 768px) {
+    .bento-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+        padding: 0.5rem 0;
+    }
+
+    .bento-card {
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 200ms ease;
+    }
+
+    .bento-card:hover {
+        border-color: var(--color-accent);
+    }
+
+    .bento-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--color-border);
+        font-weight: 600;
+    }
+
+    .bento-header svg {
+        width: 18px;
+        height: 18px;
+        color: var(--color-accent);
+    }
+
+    .bento-header .btn-link {
+        margin-left: auto;
+        font-size: 0.875rem;
+        font-weight: normal;
+    }
+
+    .bento-header .btn-icon {
+        margin-left: auto;
+        background: none;
+        border: none;
+        padding: 0.25rem;
+        cursor: pointer;
+        color: var(--color-text-muted);
+        transition: color 200ms ease;
+    }
+
+    .bento-header .btn-icon:hover {
+        color: var(--color-accent);
+    }
+
+    .bento-header .btn-icon svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .bento-header .badge-count {
+        margin-left: auto;
+        background-color: rgba(34, 197, 94, 0.15);
+        color: var(--color-accent);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .bento-body {
+        padding: 1.25rem;
+    }
+
+    /* 状态卡片 - 横跨2列 */
+    .bento-status {
+        grid-column: span 2;
+    }
+
+    .status-display {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .status-text {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .status-detail {
+        margin-top: 0.5rem;
+        color: var(--color-text-muted);
+        font-size: 0.875rem;
+    }
+
+    /* 统计卡片 */
+    .bento-stat {
+        text-align: center;
+        padding: 1.5rem;
+    }
+
+    .bento-stat .stat-value {
+        font-size: 2rem;
+    }
+
+    /* 控制面板 - 横跨2列 */
+    .bento-controls {
+        grid-column: span 2;
+    }
+
+    .control-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .control-buttons .btn {
+        flex: 1;
+        min-width: 140px;
+    }
+
+    /* 最近活动 */
+    .bento-activity {
+        grid-column: span 2;
+    }
+
+    .activity-list {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .activity-item {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+
+    .activity-item .time {
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+    }
+
+    .activity-item .title {
+        font-weight: 500;
+        margin: 0.25rem 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .activity-item .source {
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+    }
+
+    /* 图表 */
+    .bento-chart {
+        grid-column: span 2;
+    }
+
     .chart-container {
         height: 200px;
+        position: relative;
     }
-}
-</style>
 
-{% block extra_js %}
-<!-- Chart.js 库 -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    /* 网站列表 */
+    .bento-websites {
+        grid-column: span 2;
+    }
 
-<script>
-    // 页面加载完成
-    $(document).ready(function() {
-        // 更新最后更新时间
-        function updateLastUpdateTime() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('zh-CN');
-            $('#last-update').text('最后更新: ' + timeString);
+    .bento-websites .table {
+        font-size: 0.875rem;
+    }
+
+    .bento-websites .table th,
+    .bento-websites .table td {
+        padding: 0.75rem;
+    }
+
+    /* 响应式 */
+    @media (max-width: 1200px) {
+        .bento-grid {
+            grid-template-columns: repeat(2, 1fr);
         }
         
-        // 更新网站列表
-        function updateWebsitesTable() {
-            // 基础网站信息（URL和状态）
+        .bento-status,
+        .bento-controls,
+        .bento-activity,
+        .bento-chart,
+        .bento-websites {
+            grid-column: span 2;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .bento-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .bento-status,
+        .bento-stat,
+        .bento-controls,
+        .bento-activity,
+        .bento-chart,
+        .bento-websites {
+            grid-column: span 1;
+        }
+
+        .control-buttons .btn {
+            min-width: 100%;
+        }
+    }
+
+    .text-muted {
+        color: var(--color-text-muted) !important;
+    }
+
+    .btn-link {
+        color: var(--color-accent);
+        text-decoration: none;
+    }
+
+    .btn-link:hover {
+        color: var(--color-accent-hover);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const API_BASE = '';
+    let dailyChart = null;
+
+    function fetchJSON(url) {
+        return fetch(url).then(r => r.json());
+    }
+
+    function postJSON(url, data = {}) {
+        return fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }).then(r => r.json());
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast-notification toast-${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    function updateRecentActivity() {
+        fetchJSON('/api/reports?limit=5').then(response => {
+            const container = document.getElementById('recent-activity');
+            if (response.success && response.reports.length > 0) {
+                container.innerHTML = response.reports.map(report => `
+                    <div class="activity-item">
+                        <div class="time">${(report.discovered_time || '').substring(0, 19) || '未知'}</div>
+                        <div class="title">${report.title}</div>
+                        <div class="source">${report.source_website || '未知来源'}</div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<p class="text-muted">暂无最近活动</p>';
+            }
+        });
+    }
+
+    function loadRecentStats() {
+        fetchJSON('/api/recent_stats').then(response => {
+            if (response.success && response.stats) {
+                updateChart(response.stats);
+                document.getElementById('stats-update-time').textContent = new Date().toLocaleTimeString('zh-CN');
+            }
+        });
+    }
+
+    function updateChart(stats) {
+        const dailyTotals = stats.daily_totals || [];
+        const dates = dailyTotals.map(d => d.date).reverse();
+        const counts = dailyTotals.map(d => d.count).reverse();
+
+        const ctx = document.getElementById('dailyReportChart').getContext('2d');
+        
+        if (dailyChart) dailyChart.destroy();
+        
+        dailyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: '报告数量',
+                    data: counts,
+                    borderColor: '#22C55E',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#22C55E'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#94A3B8' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#94A3B8' }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateWebsitesTable() {
         const baseWebsites = [
             {name: "CONCITO", url: "https://concito.dk/", status: "正常"},
             {name: "EEB", url: "https://eeb.org/", status: "正常"},
@@ -231,416 +520,128 @@
             {name: "IUCN", url: "https://iucn.org/", status: "正常"},
             {name: "Stockholm Resilience", url: "https://www.stockholmresilience.org/", status: "正常"},
             {name: "Biodiversity Council", url: "https://biodiversitycouncil.org.au/", status: "正常"},
-            {name: "Lincoln Institute", url: "https://www.lincolninst.edu/", status: "正常"},
-            {name: "UN-Habitat", url: "https://unhabitat.org/", status: "正常"},
-            {name: "Nature Cities", url: "https://www.nature.com/natcities", status: "正常"},
-            {name: "World Bank", url: "https://www.worldbank.org/", status: "正常"}
+            {name: "Lincoln Institute", url: "https://www.lincolninst.edu/", status: "正常"}
         ];
-            
-            // 加载智库详细信息
-            $.getJSON('/static/website_details.json', function(detailsData) {
-                // 创建名称到详细信息的映射
-                const detailsMap = {};
-                if (detailsData && detailsData.websites) {
-                    detailsData.websites.forEach(detail => {
-                        detailsMap[detail.name] = {
-                            domain: detail.domain || '未设置',
-                            description: detail.description || '暂无描述'
-                        };
-                    });
-                }
-                
-                // 合并数据并生成表格
-                let html = '';
-                baseWebsites.forEach(site => {
-                    const details = detailsMap[site.name] || {domain: '未设置', description: '暂无描述'};
-                    
-                    html += `
-                    <tr>
-                        <td><strong><a href="${site.url}" target="_blank" class="text-decoration-none">${site.name}</a></strong></td>
-                        <td><span class="badge bg-info">${details.domain}</span></td>
-                        <td><span class="badge bg-success">${site.status}</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary thinktank-detail-btn" 
-                                    data-name="${site.name}"
-                                    data-url="${site.url}"
-                                    data-domain="${details.domain}"
-                                    data-description="${details.description.replace(/"/g, '&quot;')}">
-                                <i class="fas fa-info-circle me-1"></i>关于此智库
-                            </button>
-                        </td>
-                    </tr>
-                    `;
-                });
-                
-                $('#websites-table').html(html);
-                
-                // 绑定按钮点击事件
-                $('.thinktank-detail-btn').click(function() {
-                    const name = $(this).data('name');
-                    const url = $(this).data('url');
-                    const domain = $(this).data('domain');
-                    const description = $(this).data('description');
-                    
-                    // 更新模态框内容
-                    $('#modal-thinktank-name').text(name);
-                    $('#modal-thinktank-domain').text(domain);
-                    $('#modal-thinktank-url').attr('href', url).text(url);
-                    $('#modal-thinktank-description').text(description);
-                    $('#modal-thinktank-visit-btn').attr('href', url);
-                    
-                    // 显示模态框
-                    const modal = new bootstrap.Modal(document.getElementById('thinktankModal'));
-                    modal.show();
-                });
-                
-            }).fail(function() {
-                // 如果加载失败，使用基础信息
-                let html = '';
-                baseWebsites.forEach(site => {
-                    html += `
-                    <tr>
-                        <td><strong><a href="${site.url}" target="_blank" class="text-decoration-none">${site.name}</a></strong></td>
-                        <td><span class="badge bg-secondary">未加载</span></td>
-                        <td><span class="badge bg-success">${site.status}</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-secondary" disabled>
-                                <i class="fas fa-info-circle me-1"></i>信息加载失败
-                            </button>
-                        </td>
-                    </tr>
-                    `;
-                });
-                $('#websites-table').html(html);
-            });
-        }
-        
-        // 更新最近活动
-        function updateRecentActivity() {
-            $.get('/api/reports?limit=3', function(response) {
-                if (response.success && response.reports.length > 0) {
-                    let html = '';
-                    response.reports.forEach(report => {
-                        const title = report.title.length > 30 ? report.title.substring(0, 30) + '...' : report.title;
-                        const time = report.discovered_time ? report.discovered_time.substring(0, 19) : '未知时间';
-                        html += `
-                        <div class="mb-2">
-                            <div class="small">${time}</div>
-                            <div class="fw-bold">${title}</div>
-                            <div class="small text-muted">来源: ${report.source_website || '未知'}</div>
-                        </div>
-                        <hr class="my-2">
-                        `;
-                    });
-                    
-                    $('#recent-activity').html(html);
-                } else {
-                    $('#recent-activity').html('<p class="text-muted">暂无最近活动</p>');
-                }
-            });
-        }
-        
-        // 加载近期报告统计数据
-        function loadRecentStats() {
-            $.get('/api/recent_stats', function(response) {
-                if (response.success && response.stats) {
-                    const stats = response.stats;
-                    updateCharts(stats);
-                    
-                    // 更新时间
-                    const now = new Date();
-                    const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false });
-                    $('#stats-update-time').text(timeStr);
-                } else {
-                    console.error('获取统计数据失败:', response.error);
-                    $('#stats-update-time').text('获取失败');
-                }
-            }).fail(function() {
-                console.error('API请求失败');
-                $('#stats-update-time').text('请求失败');
-            });
-        }
-        
-        // 更新图表
-        function updateCharts(stats) {
-            // 提取数据
-            const dailyTotals = stats.daily_totals || [];
-            const websiteDistribution = stats.website_distribution || {};
-            const allWebsites = stats.all_websites || [];
-            
-            // 反转日期顺序（从旧到新），以便从左到右显示时间顺序
-            const dates = dailyTotals.map(d => d.date).reverse();
-            const counts = dailyTotals.map(d => d.count).reverse();
-            
-            // 1. 折线图：每日报告数量
-            const lineCtx = document.getElementById('dailyReportChart').getContext('2d');
-            
-            // 销毁现有图表实例
-            if (window.dailyReportChart instanceof Chart) {
-                window.dailyReportChart.destroy();
+
+        fetchJSON('/static/website_details.json').then(detailsData => {
+            const detailsMap = {};
+            if (detailsData?.websites) {
+                detailsData.websites.forEach(d => detailsMap[d.name] = d);
             }
-            
-            window.dailyReportChart = new Chart(lineCtx, {
-                type: 'line',
-                data: {
-                    labels: dates,
-                    datasets: [{
-                        label: '报告数量',
-                        data: counts,
-                        borderColor: '#007bff',
-                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false
-                        }
-                    },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: '日期'
-                            },
-                            ticks: {
-                                maxRotation: 45,
-                                minRotation: 0
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: '报告数量'
-                            },
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    }
-                }
-            });
-            
-            // 2. 横向堆叠条形图：网站来源分布
-            const barCtx = document.getElementById('websiteDistributionChart').getContext('2d');
-            
-            // 准备堆叠条形图数据
-            // 创建颜色调色板
-            const colorPalette = [
-                '#007bff', '#28a745', '#dc3545', '#ffc107', '#17a2b8', 
-                '#6f42c1', '#e83e8c', '#fd7e14', '#20c997', '#6610f2',
-                '#0dcaf0', '#198754', '#6c757d', '#343a40', '#0d6efd'
-            ];
-            
-            // 创建数据集：每个网站一个数据集
-            const datasets = [];
-            allWebsites.forEach((website, index) => {
-                const color = colorPalette[index % colorPalette.length];
-                const data = [];
-                
-                // 按日期顺序获取该网站的数量
-                dates.forEach(date => {
-                    const count = websiteDistribution[date] && websiteDistribution[date][website] ? 
-                                 websiteDistribution[date][website] : 0;
-                    data.push(count);
-                });
-                
-                datasets.push({
-                    label: website,
-                    data: data,
-                    backgroundColor: color,
-                    borderColor: color,
-                    borderWidth: 1
-                });
-            });
-            
-            // 销毁现有图表实例
-            if (window.websiteDistributionChart instanceof Chart) {
-                window.websiteDistributionChart.destroy();
-            }
-            
-            window.websiteDistributionChart = new Chart(barCtx, {
-                type: 'bar',
-                data: {
-                    labels: dates,
-                    datasets: datasets
-                },
-                options: {
-                    indexAxis: 'y', // 横向条形图
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: datasets.length <= 10, // 如果网站太多，隐藏图例
-                            position: 'bottom',
-                            labels: {
-                                boxWidth: 12,
-                                font: {
-                                    size: 10
-                                }
-                            }
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.dataset.label || '';
-                                    const value = context.parsed.x || 0;
-                                    return `${label}: ${value} 篇`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            stacked: true,
-                            title: {
-                                display: true,
-                                text: '报告数量'
-                            },
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        },
-                        y: {
-                            stacked: true,
-                            title: {
-                                display: true,
-                                text: '日期'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        // 初始化
-        updateLastUpdateTime();
-        updateWebsitesTable();
+
+            document.getElementById('websites-table').innerHTML = baseWebsites.map(site => {
+                const details = detailsMap[site.name] || {domain: '未设置', description: '暂无描述'};
+                return `
+                    <tr>
+                        <td><a href="${site.url}" target="_blank">${site.name}</a></td>
+                        <td><span class="badge badge-success">${site.status}</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }).catch(() => {
+            document.getElementById('websites-table').innerHTML = baseWebsites.map(site => `
+                <tr>
+                    <td><a href="${site.url}" target="_blank">${site.name}</a></td>
+                    <td><span class="badge badge-success">${site.status}</span></td>
+                </tr>
+            `).join('');
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
         updateRecentActivity();
+        updateWebsitesTable();
         loadRecentStats();
-        
-        // 刷新按钮
-        $('#refresh-btn').click(function() {
-            location.reload();
-        });
-        
-        // 刷新统计按钮
-        $('#refresh-stats-btn').click(function() {
-            $(this).find('i').addClass('fa-spin');
-            loadRecentStats();
-            
-            // 停止旋转动画
-            setTimeout(() => {
-                $(this).find('i').removeClass('fa-spin');
-            }, 1000);
-        });
-        
-        // 开始监控按钮
-        $('#start-btn').click(function() {
+
+        document.getElementById('refresh-stats-btn').addEventListener('click', loadRecentStats);
+
+        document.getElementById('start-btn')?.addEventListener('click', function() {
             if (!confirm('确定要开始监控吗？')) return;
-            
-            $.post('/api/start', function(response) {
-                if (response.success) {
-                    alert(response.message);
-                    location.reload();
+            this.disabled = true;
+            this.innerHTML = '<span class="loading"></span>启动中...';
+            postJSON('/api/start').then(r => {
+                if (r.success) {
+                    showToast(r.message, 'success');
+                    setTimeout(() => location.reload(), 1000);
                 } else {
-                    alert('启动失败: ' + response.error);
+                    showToast(r.error || '启动失败', 'error');
+                    location.reload();
                 }
             });
         });
-        
-        // 停止监控按钮
-        $('#stop-btn').click(function() {
+
+        document.getElementById('stop-btn')?.addEventListener('click', function() {
             if (!confirm('确定要停止监控吗？')) return;
-            
-            $.post('/api/stop', function(response) {
-                if (response.success) {
-                    alert(response.message);
-                    location.reload();
+            this.disabled = true;
+            this.innerHTML = '<span class="loading"></span>停止中...';
+            postJSON('/api/stop').then(r => {
+                if (r.success) {
+                    showToast(r.message, 'success');
+                    setTimeout(() => location.reload(), 1000);
                 } else {
-                    alert('停止失败: ' + response.error);
+                    showToast(r.error || '停止失败', 'error');
+                    location.reload();
                 }
             });
         });
-        
-        // 立即检查按钮
-        $('#run-once-btn').click(function() {
-            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>检查中...');
-            
-            $.post('/api/run_once', function(response) {
-                $('#run-once-btn').prop('disabled', false).html('<i class="fas fa-sync-alt me-2"></i>立即检查');
-                
-                if (response.success) {
-                    let message = response.message;
-                    if (response.results && Object.keys(response.results).length > 0) {
-                        message += '\n\n检查结果:\n';
-                        for (const [site, count] of Object.entries(response.results)) {
-                            message += `${site}: ${count} 个新报告\n`;
-                        }
-                    }
-                    alert(message);
-                    location.reload();
+
+        document.getElementById('run-once-btn').addEventListener('click', function() {
+            this.disabled = true;
+            this.innerHTML = '<span class="loading"></span>检查中...';
+            postJSON('/api/run_once').then(r => {
+                this.disabled = false;
+                this.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> 立即检查';
+                if (r.success) {
+                    showToast(r.message, 'success');
+                    setTimeout(() => location.reload(), 1500);
                 } else {
-                    alert('检查失败: ' + response.error);
+                    showToast(r.error || '检查失败', 'error');
                 }
             });
         });
-        
-        // 发送未发送报告按钮
-        $('#send-unsent-btn').click(function() {
-            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>发送中...');
-            
-            $.post('/api/send_unsent', function(response) {
-                $('#send-unsent-btn').prop('disabled', false).html('<i class="fas fa-paper-plane me-2"></i>发送未发送报告');
-                
-                if (response.success) {
-                    alert(response.message);
-                    location.reload();
+
+        document.getElementById('send-unsent-btn').addEventListener('click', function() {
+            this.disabled = true;
+            this.innerHTML = '<span class="loading"></span>发送中...';
+            postJSON('/api/send_unsent').then(r => {
+                this.disabled = false;
+                this.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> 发送待发';
+                if (r.success) {
+                    showToast(r.message, 'success');
                 } else {
-                    alert('发送失败: ' + response.error);
+                    showToast(r.error || '发送失败', 'error');
                 }
             });
         });
-        
-        // 自动刷新状态（每30秒）
-        setInterval(function() {
-            $.get('/api/status', function(response) {
-                if (response.success) {
-                    const status = response.status;
-                    
-                    // 更新状态显示
-                    if (status.is_running) {
-                        $('.status-badge').removeClass('monitor-stopped').addClass('monitor-running')
-                            .html('<i class="fas fa-play-circle me-1"></i>运行中');
-                    } else {
-                        $('.status-badge').removeClass('monitor-running').addClass('monitor-stopped')
-                            .html('<i class="fas fa-stop-circle me-1"></i>已停止');
-                    }
-                    
-                    // 更新统计数字
-                    $('#website-count').text(status.website_count);
-                    
-                    // 更新最后更新时间
-                    updateLastUpdateTime();
-                    
-                    // 更新最近活动
-                    updateRecentActivity();
-                }
+
+        setInterval(() => {
+            fetchJSON('/api/status').then(r => {
+                if (r.success) updateRecentActivity();
             });
         }, 30000);
     });
 </script>
+<style>
+    .toast-notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        box-shadow: var(--shadow-md);
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 300ms ease;
+        z-index: 9999;
+    }
+    .toast-notification.show {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    .toast-success { border-left: 3px solid var(--color-accent); }
+    .toast-error { border-left: 3px solid var(--color-danger); }
+    .toast-info { border-left: 3px solid var(--color-warning); }
+</style>
 {% endblock %}

@@ -1,564 +1,458 @@
 {% extends "base.html" %}
 
-{% block title %}报告查看{% endblock %}
+{% block title %}报告{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <h2 class="mb-4">
-            <i class="fas fa-list me-2"></i>报告查看
-            <span class="loading-spinner ms-2">
-                <i class="fas fa-spinner fa-spin"></i>
-            </span>
-        </h2>
+<div class="page-header">
+    <h1>报告</h1>
+    <div class="page-actions">
+        <button id="refresh-reports-btn" class="btn btn-outline">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            刷新
+        </button>
+        <button id="export-csv-btn" class="btn btn-outline">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            导出CSV
+        </button>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <div>
-                    <i class="fas fa-table me-2"></i>最近报告
-                    <span class="badge bg-light text-dark ms-2" id="report-count">{{ reports|length }}</span>
-                </div>
-                <div>
-                    <button id="refresh-reports-btn" class="btn btn-light btn-sm">
-                        <i class="fas fa-redo me-1"></i>刷新
-                    </button>
-                    <button id="export-csv-btn" class="btn btn-light btn-sm ms-2">
-                        <i class="fas fa-download me-1"></i>导出CSV
-                    </button>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover" id="reports-table">
-                        <thead>
+<div class="bento-grid">
+    <!-- 报告列表 -->
+    <div class="bento-card bento-reports">
+        <div class="bento-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            <span>报告列表</span>
+            <span class="badge-count" id="report-count">{{ reports|length }}</span>
+        </div>
+        <div class="bento-body">
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>标题</th>
+                            <th>来源</th>
+                            <th>时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reports-table-body">
+                        {% if reports %}
+                            {% for report in reports[:20] %}
                             <tr>
-                                <th>#</th>
-                                <th>标题</th>
-                                <th>来源</th>
-                                <th>发现时间</th>
-                                <th>邮件状态</th>
-                                <th>操作</th>
+                                <td>
+                                    <div class="report-title">{{ report.title }}</div>
+                                    <a href="{{ report.url }}" target="_blank" class="report-url">{{ report.url[:40] }}...</a>
+                                </td>
+                                <td><span class="badge badge-success">{{ report.source_website }}</span></td>
+                                <td class="text-muted">{{ report.discovered_time[:19] if report.discovered_time else '' }}</td>
+                                <td>
+                                    {% if report.sent_status %}
+                                    <span class="badge badge-success">已发送</span>
+                                    {% else %}
+                                    <span class="badge badge-warning">待发送</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ report.url }}" target="_blank" class="btn-icon" title="打开链接">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                    </a>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {% if reports %}
-                                {% for report in reports %}
-                                <tr>
-                                    <td>{{ loop.index }}</td>
-                                    <td>
-                                        <div class="fw-bold">{{ report.title }}</div>
-                                        <a href="{{ report.url }}" target="_blank" class="small text-decoration-none">
-                                            {{ report.url[:50] }}{% if report.url|length > 50 %}...{% endif %}
-                                        </a>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">{{ report.source_website }}</span>
-                                    </td>
-                                    <td>
-                                        <div class="small">{{ report.discovered_time }}</div>
-                                    </td>
-                                    <td>
-                                        {% if report.sent_status %}
-                                        <span class="badge bg-success">
-                                            <i class="fas fa-check me-1"></i>已发送
-                                        </span>
-                                        {% else %}
-                                        <span class="badge bg-warning">
-                                            <i class="fas fa-clock me-1"></i>未发送
-                                        </span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <a href="{{ report.url }}" target="_blank" class="btn btn-outline-primary">
-                                                <i class="fas fa-external-link-alt"></i>
-                                            </a>
-                                            <button type="button" class="btn btn-outline-success send-email-btn" data-id="{{ report.id }}" title="发送邮件">
-                                                <i class="fas fa-paper-plane"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">
-                                        <i class="fas fa-inbox fa-2x mb-3"></i>
-                                        <p class="mb-0">暂无报告数据</p>
-                                        <small>运行监控后，发现的报告将显示在这里</small>
-                                    </td>
-                                </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div class="d-flex justify-content-between align-items-center mt-3">
-                    <div>
-                        <small class="text-muted">
-                            显示 <span id="shown-count">{{ reports|length }}</span> 条报告
-                            {% if reports %}
-                                (最新 {{ limit }} 条)
-                            {% endif %}
-                        </small>
-                    </div>
-                    <div>
-                        <select id="limit-select" class="form-select form-select-sm" style="width: auto;">
-                            <option value="10" {% if limit == 10 %}selected{% endif %}>显示10条</option>
-                            <option value="20" {% if limit == 20 or not limit %}selected{% endif %}>显示20条</option>
-                            <option value="50" {% if limit == 50 %}selected{% endif %}>显示50条</option>
-                            <option value="100" {% if limit == 100 %}selected{% endif %}>显示100条</option>
-                        </select>
-                    </div>
-                </div>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">暂无报告数据</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="table-footer">
+                <span class="text-muted">显示 {{ reports|length }} 条报告</span>
+                <select id="limit-select" class="form-select">
+                    <option value="10" {% if limit == 10 %}selected{% endif %}>10条</option>
+                    <option value="20" {% if limit == 20 or not limit %}selected{% endif %}>20条</option>
+                    <option value="50" {% if limit == 50 %}selected{% endif %}>50条</option>
+                </select>
             </div>
         </div>
     </div>
-</div>
 
-<div class="row mt-4">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header bg-info text-white">
-                <i class="fas fa-chart-pie me-2"></i>报告统计
-            </div>
-            <div class="card-body">
-                <div id="stats-chart">
-                    <div class="row text-center">
-                        <div class="col-md-4">
-                            <div class="p-3 border rounded bg-light">
-                                <h3 class="text-primary" id="total-count">0</h3>
-                                <small class="text-muted">总报告数</small>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="p-3 border rounded bg-light">
-                                <h3 class="text-success" id="sent-count">0</h3>
-                                <small class="text-muted">已发送</small>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="p-3 border rounded bg-light">
-                                <h3 class="text-warning" id="unsent-count">0</h3>
-                                <small class="text-muted">未发送</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-3">
-                        <h6>按来源统计</h6>
-                        <div id="source-stats" class="small">
-                            <p class="text-muted">加载中...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- 统计卡片 -->
+    <div class="bento-card bento-stat">
+        <div class="stat-value">{{ reports|length }}</div>
+        <div class="stat-label">当前显示</div>
     </div>
-    
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header bg-success text-white">
-                <i class="fas fa-filter me-2"></i>筛选与操作
-            </div>
-            <div class="card-body">
-                <div class="alert alert-light">
-                    <p class="mb-2"><strong>筛选选项：</strong></p>
-                    <p class="small mb-3">可以根据发现时间范围筛选报告，查看特定时间段内的内容。</p>
-                    
-                    <div class="mb-3">
-                        <label class="form-label small">时间范围筛选</label>
-                        <div class="input-group">
-                            <input type="date" id="start-date" class="form-control form-control-sm" placeholder="开始日期">
-                            <span class="input-group-text">至</span>
-                            <input type="date" id="end-date" class="form-control form-control-sm" placeholder="结束日期">
-                        </div>
-                    </div>
-                    
-                    <div class="d-grid gap-2">
-                        <button id="filter-date-btn" class="btn btn-primary">
-                            <i class="fas fa-filter me-2"></i>按日期筛选
-                        </button>
-                        
-                        <button id="reset-filter-btn" class="btn btn-outline-secondary">
-                            <i class="fas fa-redo me-2"></i>重置筛选
-                        </button>
-                        
-                        <button id="export-csv-filter-btn" class="btn btn-warning">
-                            <i class="fas fa-download me-2"></i>导出CSV
-                        </button>
-                        
-                        <button id="send-all-unsent-btn" class="btn btn-warning">
-                            <i class="fas fa-paper-plane me-2"></i>发送所有未发送报告
-                        </button>
-                        
-                        <button id="check-now-btn" class="btn btn-primary">
-                            <i class="fas fa-sync-alt me-2"></i>立即检查新报告
-                        </button>
-                        
-                        <button id="clear-reports-btn" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#clearModal">
-                            <i class="fas fa-trash me-2"></i>清空所有报告
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="mt-3">
-                    <h6>数据说明</h6>
-                    <div class="small">
-                        <p><strong>报告来源：</strong>所有监控的智库网站</p>
-                        <p><strong>时间范围：</strong>显示最新 {{ limit }} 条报告</p>
-                        <p><strong>更新时间：</strong> <span id="last-update-time">--:--:--</span></p>
-                        <p><strong>数据总量：</strong>数据库中共有 <span id="total-in-db">0</span> 条报告记录</p>
-                        <p><strong>数据库文件：</strong> <code id="db-path">reports.db</code></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- 清空确认模态框 -->
-<div class="modal fade" id="clearModal" tabindex="-1" aria-labelledby="clearModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="clearModalLabel">
-                    <i class="fas fa-exclamation-triangle me-2"></i>确认清空报告
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="bento-card bento-stat">
+        <div class="stat-value" id="total-db">--</div>
+        <div class="stat-label">数据库总量</div>
+    </div>
+
+    <!-- 操作面板 -->
+    <div class="bento-card bento-actions">
+        <div class="bento-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span>操作</span>
+        </div>
+        <div class="bento-body">
+            <button id="check-now-btn" class="btn btn-primary w-100 mb-2">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                立即检查
+            </button>
+            <button id="send-all-btn" class="btn btn-outline w-100 mb-2">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                发送待发
+            </button>
+            <button id="export-filter-btn" class="btn btn-outline w-100">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                导出CSV
+            </button>
+        </div>
+    </div>
+
+    <!-- 筛选 -->
+    <div class="bento-card bento-filter">
+        <div class="bento-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+            </svg>
+            <span>筛选</span>
+        </div>
+        <div class="bento-body">
+            <div class="form-group">
+                <label class="form-label">开始日期</label>
+                <input type="date" id="start-date" class="form-control">
             </div>
-            <div class="modal-body">
-                <div class="alert alert-danger">
-                    <i class="fas fa-radiation me-2"></i>
-                    <strong>警告：</strong>此操作将删除数据库中的所有报告记录，且无法恢复！
-                </div>
-                <p>确定要清空所有报告吗？</p>
-                <ul>
-                    <li>所有报告记录将被永久删除</li>
-                    <li>邮件发送状态记录也会被删除</li>
-                    <li>此操作无法撤销</li>
-                </ul>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="confirm-clear">
-                    <label class="form-check-label" for="confirm-clear">
-                        我确认理解此操作的后果
-                    </label>
-                </div>
+            <div class="form-group">
+                <label class="form-label">结束日期</label>
+                <input type="date" id="end-date" class="form-control">
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-danger" id="confirm-clear-btn" disabled>确认清空</button>
+            <div class="filter-actions">
+                <button id="filter-btn" class="btn btn-outline w-100 mb-2">应用筛选</button>
+                <button id="reset-filter-btn" class="btn btn-outline w-100">重置</button>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .page-header h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .page-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .bento-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+
+    .bento-card {
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 200ms ease;
+    }
+
+    .bento-card:hover {
+        border-color: var(--color-accent);
+    }
+
+    .bento-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--color-border);
+        font-weight: 600;
+    }
+
+    .bento-header svg {
+        width: 18px;
+        height: 18px;
+        color: var(--color-accent);
+    }
+
+    .bento-header .badge-count {
+        margin-left: auto;
+        background-color: rgba(34, 197, 94, 0.15);
+        color: var(--color-accent);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+    }
+
+    .bento-body {
+        padding: 1.25rem;
+    }
+
+    .bento-reports {
+        grid-column: span 2;
+    }
+
+    .bento-stat {
+        text-align: center;
+        padding: 1.5rem;
+    }
+
+    .bento-stat .stat-value {
+        font-size: 2rem;
+    }
+
+    .bento-actions, .bento-filter {
+        grid-column: span 1;
+    }
+
+    .table-container {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .table {
+        font-size: 0.875rem;
+    }
+
+    .table th, .table td {
+        padding: 0.75rem;
+        border-color: var(--color-border);
+    }
+
+    .report-title {
+        font-weight: 500;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .report-url {
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+    }
+
+    .table-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--color-border);
+    }
+
+    .table-footer .form-select {
+        width: auto;
+    }
+
+    .btn-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        color: var(--color-text-muted);
+        transition: all 200ms ease;
+    }
+
+    .btn-icon:hover {
+        background-color: var(--color-surface-hover);
+        color: var(--color-accent);
+    }
+
+    .btn-icon svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-group .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--color-text-muted);
+        font-size: 0.875rem;
+    }
+
+    .form-control {
+        width: 100%;
+    }
+
+    @media (max-width: 1024px) {
+        .bento-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .bento-reports {
+            grid-column: span 2;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .bento-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .bento-reports,
+        .bento-stat,
+        .bento-actions,
+        .bento-filter {
+            grid-column: span 1;
+        }
+        
+        .page-header {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block extra_js %}
 <script>
-    // 页面加载完成
-    $(document).ready(function() {
-        // 初始化统计信息
-        function updateStatistics() {
-            const reports = {{ reports|tojson|safe }};
-            
-            // 更新总数
-            $('#total-count').text(reports.length);
-            
-            // 计算已发送和未发送数量
-            let sentCount = 0;
-            let unsentCount = 0;
-            let sources = {};
-            
-            reports.forEach(report => {
-                if (report.sent_status) {
-                    sentCount++;
-                } else {
-                    unsentCount++;
-                }
-                
-                // 统计来源
-                const source = report.source_website || '未知';
-                sources[source] = (sources[source] || 0) + 1;
-            });
-            
-            $('#sent-count').text(sentCount);
-            $('#unsent-count').text(unsentCount);
-            $('#shown-count').text(reports.length);
-            $('#report-count').text(reports.length);
-            
-            // 更新来源统计
-            let sourceHtml = '';
-            for (const [source, count] of Object.entries(sources)) {
-                const percentage = (count / reports.length * 100).toFixed(1);
-                sourceHtml += `
-                <div class="d-flex justify-content-between mb-1">
-                    <span>${source}</span>
-                    <span>
-                        <span class="badge bg-secondary me-2">${count}</span>
-                        <small class="text-muted">${percentage}%</small>
-                    </span>
-                </div>
-                `;
+    function fetchJSON(url) {
+        return fetch(url).then(r => r.json());
+    }
+
+    function postJSON(url, data = {}) {
+        return fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }).then(r => r.json());
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast-notification toast-${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchJSON('/api/status').then(r => {
+            if (r.success) {
+                document.getElementById('total-db').textContent = r.status.total_reports || 0;
             }
-            
-            if (sourceHtml) {
-                $('#source-stats').html(sourceHtml);
-            }
-            
-            // 更新报告时间范围
-            if (reports.length > 0) {
-                const times = reports.map(r => r.discovered_time).filter(t => t);
-                if (times.length > 0) {
-                    const sorted = times.sort();
-                    $('#last-report-time').text(sorted[0].substring(0, 19));
-                    $('#report-time-range').text(`${sorted[sorted.length-1].substring(0, 10)} 至 ${sorted[0].substring(0, 10)}`);
-                }
-            }
-        }
-        
-        // 初始化
-        updateStatistics();
-        
-        // 刷新报告按钮
-        $('#refresh-reports-btn').click(function() {
-            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>刷新中...');
-            
-            const limit = $('#limit-select').val();
-            
-            $.get('/api/reports?limit=' + limit, function(response) {
-                $('#refresh-reports-btn').prop('disabled', false).html('<i class="fas fa-redo me-1"></i>刷新');
-                
-                if (response.success) {
-                    // 重新加载页面以显示新数据
-                    location.reload();
+        });
+
+        document.getElementById('refresh-reports-btn').addEventListener('click', function() {
+            location.reload();
+        });
+
+        document.getElementById('limit-select').addEventListener('change', function() {
+            window.location.href = '/reports?limit=' + this.value;
+        });
+
+        document.getElementById('check-now-btn').addEventListener('click', function() {
+            this.disabled = true;
+            this.innerHTML = '<span class="loading"></span>检查中...';
+            postJSON('/api/run_once').then(r => {
+                this.disabled = false;
+                this.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> 立即检查';
+                if (r.success) {
+                    showToast(r.message, 'success');
+                    setTimeout(() => location.reload(), 1500);
                 } else {
-                    alert('刷新失败: ' + response.error);
+                    showToast(r.error || '检查失败', 'error');
                 }
             });
         });
-        
-        // 限制选择器
-        $('#limit-select').change(function() {
-            const limit = $(this).val();
-            window.location.href = '/reports?limit=' + limit;
-        });
-        
-        // 发送单个报告邮件按钮（实际发送所有未发送报告）
-        $('.send-email-btn').click(function() {
-            const reportId = $(this).data('id');
-            const $btn = $(this);
-            
-            if (!confirm('注意：此操作将发送所有未发送的报告邮件，而不仅仅是当前报告。确定要继续吗？')) {
-                return;
-            }
-            
-            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
-            
-            // 发送所有未发送报告
-            $.post('/api/send_unsent', function(response) {
-                $btn.prop('disabled', false).html('<i class="fas fa-paper-plane"></i>');
-                
-                if (response.success) {
-                    alert(response.message);
-                    // 刷新页面更新状态
-                    setTimeout(() => location.reload(), 1000);
+
+        document.getElementById('send-all-btn').addEventListener('click', function() {
+            this.disabled = true;
+            this.innerHTML = '<span class="loading"></span>发送中...';
+            postJSON('/api/send_unsent').then(r => {
+                this.disabled = false;
+                this.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> 发送待发';
+                if (r.success) {
+                    showToast(r.message, 'success');
                 } else {
-                    alert('发送失败: ' + response.error);
+                    showToast(r.error || '发送失败', 'error');
                 }
             });
         });
-        
-        // 发送所有未发送报告按钮
-        $('#send-all-unsent-btn').click(function() {
-            if (!confirm('确定要发送所有未发送的报告邮件吗？')) return;
-            
-            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>发送中...');
-            
-            $.post('/api/send_unsent', function(response) {
-                $('#send-all-unsent-btn').prop('disabled', false).html('<i class="fas fa-paper-plane me-2"></i>发送所有未发送报告');
-                
-                if (response.success) {
-                    alert(response.message);
-                    location.reload();
-                } else {
-                    alert('发送失败: ' + response.error);
-                }
-            });
+
+        document.getElementById('export-csv-btn').addEventListener('click', function() {
+            window.location.href = '/api/export_reports?format=csv';
         });
-        
-        // 立即检查按钮
-        $('#check-now-btn').click(function() {
-            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>检查中...');
-            
-            $.post('/api/run_once', function(response) {
-                $('#check-now-btn').prop('disabled', false).html('<i class="fas fa-sync-alt me-2"></i>立即检查新报告');
-                
-                if (response.success) {
-                    let message = response.message;
-                    if (response.results && Object.keys(response.results).length > 0) {
-                        message += '\n\n检查结果:\n';
-                        for (const [site, count] of Object.entries(response.results)) {
-                            message += `${site}: ${count} 个新报告\n`;
-                        }
-                        message += '\n页面将刷新显示新报告。';
-                    } else {
-                        message += '\n本次检查未发现新报告。';
-                    }
-                    
-                    alert(message);
-                    location.reload();
-                } else {
-                    alert('检查失败: ' + response.error);
-                }
-            });
+
+        document.getElementById('export-filter-btn').addEventListener('click', function() {
+            const start = document.getElementById('start-date').value;
+            const end = document.getElementById('end-date').value;
+            let url = '/api/export_reports?format=csv';
+            if (start) url += '&start_date=' + start;
+            if (end) url += '&end_date=' + end;
+            window.location.href = url;
         });
-        
-        // 导出CSV按钮
-        $('#export-csv-btn').click(function() {
-            // 获取报告数据
-            const reports = {{ reports|tojson|safe }};
-            
-            if (reports.length === 0) {
-                alert('没有报告数据可导出');
-                return;
-            }
-            
-            // 创建CSV内容
-            let csv = '标题,链接,来源,发现时间,邮件状态\n';
-            
-            reports.forEach(report => {
-                const title = report.title.replace(/"/g, '""');
-                const url = report.url.replace(/"/g, '""');
-                const source = report.source_website || '';
-                const time = report.discovered_time || '';
-                const status = report.sent_status ? '已发送' : '未发送';
-                
-                csv += `"${title}","${url}","${source}","${time}","${status}"\n`;
-            });
-            
-            // 创建下载链接
-            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            
-            link.href = url;
-            link.download = `thinktank_reports_${new Date().toISOString().slice(0, 10)}.csv`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            alert(`已导出 ${reports.length} 条报告到CSV文件`);
+
+        document.getElementById('filter-btn').addEventListener('click', function() {
+            const start = document.getElementById('start-date').value;
+            const end = document.getElementById('end-date').value;
+            let url = '/reports?limit=50';
+            if (start) url += '&start_date=' + start;
+            if (end) url += '&end_date=' + end;
+            window.location.href = url;
         });
-        
-        // 清空确认复选框
-        $('#confirm-clear').change(function() {
-            $('#confirm-clear-btn').prop('disabled', !$(this).is(':checked'));
+
+        document.getElementById('reset-filter-btn').addEventListener('click', function() {
+            document.getElementById('start-date').value = '';
+            document.getElementById('end-date').value = '';
+            window.location.href = '/reports?limit=20';
         });
-        
-        // 确认清空按钮
-        $('#confirm-clear-btn').click(function() {
-            // 这里需要实现清空数据库的功能
-            // 由于安全原因，暂时不实现此功能
-            alert('清空报告功能需要后端API支持，当前版本暂未实现。\n\n如需清空报告，请手动删除数据库文件或使用命令行工具。');
-            $('#clearModal').modal('hide');
-        });
-        
-        // 自动刷新报告列表（每60秒）
-        setInterval(function() {
-            $.get('/api/reports?limit=5', function(response) {
-                if (response.success && response.reports.length > 0) {
-                    // 如果有新报告，显示提示
-                    const currentCount = $('#report-count').text();
-                    if (response.count > parseInt(currentCount)) {
-                        $('#refresh-reports-btn').addClass('btn-warning').removeClass('btn-light');
-                    }
-                }
-            });
-        }, 60000);
-        
-        // 筛选功能
-        $('#filter-date-btn').on('click', function() {
-            const startDate = $('#start-date').val();
-            const endDate = $('#end-date').val();
-            
-            if (!startDate && !endDate) {
-                alert('请至少输入一个日期范围');
-                return;
-            }
-            
-            // 构建筛选参数
-            let params = {};
-            if (startDate) params.start_date = startDate;
-            if (endDate) params.end_date = endDate;
-            
-            // 获取当前URL参数
-            const urlParams = new URLSearchParams(window.location.search);
-            const days = urlParams.get('days') || 30;
-            const limit = urlParams.get('limit') || 20;
-            
-            params.days = days;
-            params.limit = limit;
-            
-            // 加载筛选后的报告
-            loadReports(params);
-        });
-        
-        $('#reset-filter-btn').on('click', function() {
-            // 清空日期输入
-            $('#start-date').val('');
-            $('#end-date').val('');
-            
-            // 重置URL参数
-            const urlParams = new URLSearchParams(window.location.search);
-            const days = urlParams.get('days') || 30;
-            const limit = urlParams.get('limit') || 20;
-            
-            // 重新加载报告（无筛选）
-            loadReports({days: days, limit: limit});
-        });
-        
-        $('#export-csv-filter-btn').on('click', function() {
-            const startDate = $('#start-date').val();
-            const endDate = $('#end-date').val();
-            
-            // 构建导出URL
-            let exportUrl = '/api/export_reports?format=csv';
-            if (startDate) exportUrl += '&start_date=' + encodeURIComponent(startDate);
-            if (endDate) exportUrl += '&end_date=' + encodeURIComponent(endDate);
-            
-            // 触发下载
-            window.location.href = exportUrl;
-        });
-        
-        // 更新loadReports函数以支持筛选参数
-        function loadReports(params = {}) {
-            // 构建查询字符串
-            const queryString = new URLSearchParams(params).toString();
-            const url = '/api/reports' + (queryString ? '?' + queryString : '');
-            
-            $.get(url, function(response) {
-                if (response.success) {
-                    updateReportsTable(response.reports);
-                    updateReportStats(response.count, response.total_count);
-                } else {
-                    alert('加载报告失败: ' + response.error);
-                }
-            }).fail(function() {
-                alert('网络错误，请稍后重试');
-            });
-        }
-        
-        // 更新报告统计信息
-        function updateReportStats(count, totalCount) {
-            $('#report-count').text(count);
-            $('#total-in-db').text(totalCount);
-            $('#last-update-time').text(new Date().toLocaleTimeString());
-        }
     });
 </script>
+<style>
+    .toast-notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        box-shadow: var(--shadow-md);
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 300ms ease;
+        z-index: 9999;
+    }
+    .toast-notification.show { transform: translateY(0); opacity: 1; }
+    .toast-success { border-left: 3px solid var(--color-accent); }
+    .toast-error { border-left: 3px solid var(--color-danger); }
+</style>
 {% endblock %}
