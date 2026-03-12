@@ -366,6 +366,45 @@
                 transition-duration: 0.01ms !important;
             }
         }
+
+        .feature-list li {
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .thinktank-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .thinktank-tag {
+            background-color: var(--color-surface-hover);
+            color: var(--color-text);
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .tech-tag {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: var(--color-accent);
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .version-info {
+            border-color: var(--color-border) !important;
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -464,34 +503,100 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>绿色智库前沿进展追踪系统，实时监控全球领先智库的最新出版物。</p>
-                    <h6 class="mt-4 mb-3">主要功能</h6>
-                    <ul class="list-unstyled">
+                    <p class="mb-3">绿色智库前沿进展追踪系统，实时监控全球领先智库的最新出版物，为用户提供及时的绿色发展资讯。</p>
+                    
+                    <h6 class="mt-4 mb-3">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" style="width:16px;height:16px;margin-right:8px;vertical-align:middle">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                        主要功能
+                    </h6>
+                    <ul class="list-unstyled feature-list">
                         <li class="mb-2">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" style="width:16px;height:16px;margin-right:8px">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" style="width:16px;height:16px;margin-right:8px;flex-shrink:0">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
-                            监控全球13个绿色智库网站
+                            <span>监控全球18个绿色智库网站</span>
                         </li>
                         <li class="mb-2">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" style="width:16px;height:16px;margin-right:8px">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" style="width:16px;height:16px;margin-right:8px;flex-shrink:0">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
-                            自动抓取最新研究报告
+                            <span>自动抓取最新研究报告</span>
                         </li>
                         <li class="mb-2">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" style="width:16px;height:16px;margin-right:8px">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" style="width:16px;height:16px;margin-right:8px;flex-shrink:0">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
-                            邮件推送新报告通知
+                            <span>邮件推送新报告通知</span>
+                        </li>
+                        <li class="mb-2">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" style="width:16px;height:16px;margin-right:8px;flex-shrink:0">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <span>支持CSV格式导出</span>
+                        </li>
+                        <li class="mb-2">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" style="width:16px;height:16px;margin-right:8px;flex-shrink:0">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <span>每小时自动检查更新</span>
                         </li>
                         <li class="mb-0">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" style="width:16px;height:16px;margin-right:8px">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" style="width:16px;height:16px;margin-right:8px;flex-shrink:0">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
-                            支持CSV格式导出
+                            <span>智能过滤无关内容</span>
                         </li>
                     </ul>
+
+                    <h6 class="mt-4 mb-3">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" style="width:16px;height:16px;margin-right:8px;vertical-align:middle">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                        </svg>
+                        监控智库
+                    </h6>
+                    <div class="thinktank-grid">
+                        <span class="thinktank-tag">CONCITO</span>
+                        <span class="thinktank-tag">EEB</span>
+                        <span class="thinktank-tag">Green Alliance</span>
+                        <span class="thinktank-tag">Pembina Institute</span>
+                        <span class="thinktank-tag">Ecotrust</span>
+                        <span class="thinktank-tag">Nature Conservancy</span>
+                        <span class="thinktank-tag">IISD</span>
+                        <span class="thinktank-tag">Ecologic Institute</span>
+                        <span class="thinktank-tag">IEEP</span>
+                        <span class="thinktank-tag">IUCN</span>
+                        <span class="thinktank-tag">Stockholm Resilience</span>
+                        <span class="thinktank-tag">Biodiversity Council</span>
+                        <span class="thinktank-tag">Lincoln Institute</span>
+                        <span class="thinktank-tag">UN-Habitat</span>
+                        <span class="thinktank-tag">WRI</span>
+                        <span class="thinktank-tag">OECD</span>
+                        <span class="thinktank-tag">Nature Cities</span>
+                        <span class="thinktank-tag">World Bank</span>
+                    </div>
+
+                    <h6 class="mt-4 mb-3">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" style="width:16px;height:16px;margin-right:8px;vertical-align:middle">
+                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        技术栈
+                    </h6>
+                    <div class="tech-stack">
+                        <span class="tech-tag">Flask</span>
+                        <span class="tech-tag">APScheduler</span>
+                        <span class="tech-tag">SQLite</span>
+                        <span class="tech-tag">Bootstrap 5</span>
+                        <span class="tech-tag">Chart.js</span>
+                    </div>
+                    
+                    <div class="version-info mt-4 pt-3 border-top">
+                        <small class="text-muted">版本 v1.0 | 构建日期 2024</small>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-primary" data-bs-dismiss="modal">确定</button>
@@ -504,7 +609,7 @@
         <div class="container">
             <div class="row">
                 <div class="col text-center">
-                    <p>智库监控 v1.0 &copy; 2024 | 监控 <span id="website-count">13</span> 个智库</p>
+                    <p>智库监控 v1.0 &copy; 2024 | 监控 <span id="website-count">18</span> 个智库</p>
                     <p class="mt-2">
                         <span id="current-time">--:--:--</span>
                     </p>
