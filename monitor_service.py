@@ -739,10 +739,11 @@ class MonitorService:
                     'error': '无法创建监控器，邮件发送失败'
                 }
             
-            # 获取最近2小时内未发送的报告，但排除最近5分钟内发现的报告，避免与正在进行的邮件发送冲突
+            # 获取最近15分钟内未发送的报告，只发送本次监控中发现的新报告
+            # 排除最近5分钟内发现的报告，避免与正在进行的邮件发送冲突
             from datetime import datetime, timedelta
             with DatabaseManager(self.db_path) as db:
-                unsent_reports = db.get_unsent_reports(hours=2)
+                unsent_reports = db.get_unsent_reports(hours=0.25)  # 15分钟
                 
             if not unsent_reports:
                 return {

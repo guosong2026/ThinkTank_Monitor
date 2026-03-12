@@ -380,8 +380,9 @@ class WebsiteMonitor:
         try:
             from datetime import datetime, timedelta
             with DatabaseManager(self.db_path) as db:
-                # 获取最近2小时内未发送的报告，但排除最近5分钟内发现的报告，避免与正在进行的邮件发送冲突
-                unsent_reports = db.get_unsent_reports(hours=2)
+                # 获取最近15分钟内未发送的报告，只发送本次监控中发现的新报告
+                # 排除最近5分钟内发现的报告，避免与正在进行的邮件发送冲突
+                unsent_reports = db.get_unsent_reports(hours=0.25)  # 15分钟
                 
                 if not unsent_reports:
                     logger.info("没有未发送的报告")
@@ -912,8 +913,9 @@ class MultiWebsiteMonitor:
             from db import DatabaseManager
             from datetime import datetime, timedelta
             with DatabaseManager(self.db_path) as db:
-                # 获取未发送报告，但排除最近5分钟内发现的报告，避免与正在进行的邮件发送冲突
-                unsent_reports = db.get_unsent_reports(hours=2)
+                # 获取最近15分钟内未发送的报告，只发送本次监控中发现的新报告
+                # 排除最近5分钟内发现的报告，避免与正在进行的邮件发送冲突
+                unsent_reports = db.get_unsent_reports(hours=0.25)  # 15分钟
                 
                 if not unsent_reports:
                     logger.info("没有未发送的报告")
