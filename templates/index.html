@@ -3,120 +3,67 @@
 {% block title %}仪表板{% endblock %}
 
 {% block content %}
-<div class="bento-grid">
-    <!-- 状态概览 -->
-    <div class="bento-card bento-status">
-        <div class="bento-header">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-            <span>监控状态</span>
+<div class="home-layout">
+    <!-- 第一行：系统名称 + 最近活动 -->
+    <div class="hero-section">
+        <div class="system-title">
+            <h1 class="title-main">绿色智库</h1>
+            <h1 class="title-sub">前沿进展追踪</h1>
         </div>
-        <div class="bento-body">
-            <div class="status-display">
-                <span class="status-dot {% if status.is_running %}active{% else %}inactive{% endif %}"></span>
-                <span class="status-text">{% if status.is_running %}运行中{% else %}已停止{% endif %}</span>
+        <div class="bento-card recent-activity-card">
+            <div class="bento-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+                <span>最近活动</span>
+                <a href="/reports" class="btn-link">查看全部</a>
             </div>
-            <div class="status-detail">
-                {% if status.is_running %}
-                <p>下次检查: {{ status.next_run_time or '即将开始' }}</p>
-                {% else %}
-                <p>点击下方按钮启动监控</p>
-                {% endif %}
+            <div class="bento-body">
+                <div id="recent-activity" class="activity-list">
+                    <p class="text-muted">加载中...</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 统计卡片 -->
-    <div class="bento-card bento-stat">
-        <div class="stat-value">{{ status.total_reports or 0 }}</div>
-        <div class="stat-label">总报告数</div>
-    </div>
-
-    <div class="bento-card bento-stat">
-        <div class="stat-value">{{ status.sent_reports or 0 }}</div>
-        <div class="stat-label">已发送</div>
-    </div>
-
-    <div class="bento-card bento-stat">
-        <div class="stat-value">{{ status.unsent_reports or 0 }}</div>
-        <div class="stat-label">待发送</div>
-    </div>
-
-    <!-- 控制面板 -->
-    <div class="bento-card bento-controls">
-        <div class="bento-header">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-            </svg>
-            <span>控制面板</span>
-        </div>
-        <div class="bento-body">
-            <div class="control-buttons">
-                {% if status.is_running %}
-                <button id="stop-btn" class="btn btn-danger">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"></rect></svg>
-                    停止监控
-                </button>
-                {% else %}
-                <button id="start-btn" class="btn btn-primary">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                    开始监控
-                </button>
-                {% endif %}
-                
-                <button id="run-once-btn" class="btn btn-outline">
+    <!-- 第二行：趋势图 + 来源饼图 -->
+    <div class="stats-row">
+        <div class="bento-card bento-chart">
+            <div class="bento-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                <span>近期趋势</span>
+                <button id="refresh-stats-btn" class="btn-icon" title="刷新">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-                    立即检查
-                </button>
-                
-                <button id="send-unsent-btn" class="btn btn-outline">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                    发送待发
                 </button>
             </div>
+            <div class="bento-body">
+                <div class="chart-container">
+                    <canvas id="dailyReportChart"></canvas>
+                </div>
+            </div>
         </div>
-    </div>
-
-    <!-- 最近活动 -->
-    <div class="bento-card bento-activity">
-        <div class="bento-header">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-            </svg>
-            <span>最近活动</span>
-            <a href="/reports" class="btn-link">查看全部</a>
-        </div>
-        <div class="bento-body">
-            <div id="recent-activity" class="activity-list">
-                <p class="text-muted">加载中...</p>
+        <div class="bento-card bento-pie">
+            <div class="bento-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+                    <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+                </svg>
+                <span>近十天来源分布</span>
+            </div>
+            <div class="bento-body">
+                <div class="pie-container">
+                    <canvas id="sourcePieChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 统计图表 -->
-    <div class="bento-card bento-chart">
-        <div class="bento-header">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="20" x2="18" y2="10"></line>
-                <line x1="12" y1="20" x2="12" y2="4"></line>
-                <line x1="6" y1="20" x2="6" y2="14"></line>
-            </svg>
-            <span>近期趋势</span>
-            <button id="refresh-stats-btn" class="btn-icon" title="刷新">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-            </button>
-        </div>
-        <div class="bento-body">
-            <div class="chart-container">
-                <canvas id="dailyReportChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- 网站列表 -->
-    <div class="bento-card bento-websites">
+    <!-- 第三行：监控网站（全屏） -->
+    <div class="bento-card bento-websites-full">
         <div class="bento-header">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"></circle>
@@ -124,7 +71,7 @@
                 <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
             </svg>
             <span>监控网站</span>
-            <span class="badge-count">{{ status.website_count or 13 }}</span>
+            <span class="badge-count">{{ status.website_count or 18 }}</span>
         </div>
         <div class="bento-body">
             <div class="table-responsive">
@@ -141,6 +88,77 @@
                         <tr><td colspan="4" class="text-center text-muted">加载中...</td></tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部：运行状态 + 控制面板 -->
+    <div class="footer-controls">
+        <div class="bento-card bento-status">
+            <div class="bento-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span>监控状态</span>
+            </div>
+            <div class="bento-body">
+                <div class="status-display">
+                    <span class="status-dot {% if status.is_running %}active{% else %}inactive{% endif %}"></span>
+                    <span class="status-text">{% if status.is_running %}运行中{% else %}已停止{% endif %}</span>
+                </div>
+                <div class="status-detail">
+                    {% if status.is_running %}
+                    <p>下次检查: {{ status.next_run_time or '即将开始' }}</p>
+                    {% else %}
+                    <p>点击按钮启动监控</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="bento-card bento-stat-card">
+            <div class="stat-value">{{ status.total_reports or 0 }}</div>
+            <div class="stat-label">总报告数</div>
+        </div>
+        <div class="bento-card bento-stat-card">
+            <div class="stat-value">{{ status.sent_reports or 0 }}</div>
+            <div class="stat-label">已发送</div>
+        </div>
+        <div class="bento-card bento-stat-card">
+            <div class="stat-value">{{ status.unsent_reports or 0 }}</div>
+            <div class="stat-label">待发送</div>
+        </div>
+        <div class="bento-card bento-controls">
+            <div class="bento-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <span>控制面板</span>
+            </div>
+            <div class="bento-body">
+                <div class="control-buttons">
+                    {% if status.is_running %}
+                    <button id="stop-btn" class="btn btn-danger">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"></rect></svg>
+                        停止监控
+                    </button>
+                    {% else %}
+                    <button id="start-btn" class="btn btn-primary">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        开始监控
+                    </button>
+                    {% endif %}
+                    
+                    <button id="run-once-btn" class="btn btn-outline">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        立即检查
+                    </button>
+                    
+                    <button id="send-unsent-btn" class="btn btn-outline">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        发送待发
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -174,11 +192,69 @@
 
 {% block extra_css %}
 <style>
-    .bento-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
+    .home-layout {
+        display: flex;
+        flex-direction: column;
         gap: 1.5rem;
         padding: 0.5rem 0;
+    }
+
+    /* 英雄区域：系统名称 + 最近活动 */
+    .hero-section {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+
+    .system-title {
+        display: flex;
+        flex-direction: column;
+        padding: 1rem 0;
+    }
+
+    .system-title .title-main {
+        font-size: 3rem;
+        font-weight: 800;
+        color: var(--color-accent);
+        line-height: 1.1;
+        margin: 0;
+    }
+
+    .system-title .title-sub {
+        font-size: 2rem;
+        font-weight: 600;
+        color: var(--color-text);
+        line-height: 1.2;
+        margin: 0;
+    }
+
+    .recent-activity-card {
+        height: 100%;
+    }
+
+    /* 统计行：趋势图 + 饼图 */
+    .stats-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+    }
+
+    /* 监控网站全屏 */
+    .bento-websites-full {
+        width: 100%;
+    }
+
+    .bento-websites-full .table {
+        margin-bottom: 0;
+    }
+
+    /* 底部控制区域 */
+    .footer-controls {
+        display: grid;
+        grid-template-columns: 1fr auto auto auto 1.5fr;
+        gap: 1rem;
+        align-items: stretch;
     }
 
     .bento-card {
@@ -247,171 +323,119 @@
         padding: 1.25rem;
     }
 
-    /* 状态卡片 - 横跨2列 */
-    .bento-status {
-        grid-column: span 2;
-    }
-
-    .status-display {
+    /* 状态卡片 */
+    .bento-status .status-display {
         display: flex;
         align-items: center;
         gap: 0.75rem;
     }
 
-    .status-text {
-        font-size: 1.5rem;
+    .bento-status .status-text {
+        font-size: 1.25rem;
         font-weight: 700;
     }
 
-    .status-detail {
+    .bento-status .status-detail {
         margin-top: 0.5rem;
         color: var(--color-text-muted);
         font-size: 0.875rem;
     }
 
     /* 统计卡片 */
-    .bento-stat {
+    .bento-stat-card {
         text-align: center;
-        padding: 1.5rem;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
 
-    .bento-stat .stat-value {
-        font-size: 2rem;
+    .bento-stat-card .stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--color-accent);
     }
 
-    /* 控制面板 - 横跨2列 */
-    .bento-controls {
-        grid-column: span 2;
+    .bento-stat-card .stat-label {
+        color: var(--color-text-muted);
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
     }
 
-    .control-buttons {
+    /* 控制面板 */
+    .bento-controls .control-buttons {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.75rem;
+        gap: 0.5rem;
     }
 
-    .control-buttons .btn {
+    .bento-controls .btn {
         flex: 1;
-        min-width: 140px;
-    }
-
-    /* 最近活动 */
-    .bento-activity {
-        grid-column: span 2;
-    }
-
-    .activity-list {
-        max-height: 200px;
-        overflow-y: auto;
-    }
-
-    .activity-item {
-        padding: 0.75rem 0;
-        border-bottom: 1px solid var(--color-border);
-    }
-
-    .activity-item:last-child {
-        border-bottom: none;
-    }
-
-    .activity-item .time {
-        font-size: 0.75rem;
-        color: var(--color-text-muted);
-    }
-
-    .activity-item .title {
-        font-weight: 500;
-        margin: 0.25rem 0;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .activity-item .source {
-        font-size: 0.75rem;
-        color: var(--color-text-muted);
-    }
-
-    /* 图表 */
-    .bento-chart {
-        grid-column: span 2;
-    }
-
-    .chart-container {
-        height: 200px;
-        position: relative;
-    }
-
-    /* 网站列表 */
-    .bento-websites {
-        grid-column: span 2;
-    }
-
-    .bento-websites .table {
+        min-width: 100px;
+        padding: 0.5rem 0.75rem;
         font-size: 0.875rem;
     }
 
-    .bento-websites .table th,
-    .bento-websites .table td {
-        padding: 0.75rem;
-        vertical-align: middle;
+    /* 图表容器 */
+    .chart-container {
+        height: 250px;
+        position: relative;
     }
 
-    .thinktank-name {
-        font-weight: 500;
-    }
-
-    .badge-domain {
-        background-color: rgba(59, 130, 246, 0.15);
-        color: #60A5FA;
-    }
-
-    .btn-view-details {
-        background: none;
-        border: none;
-        padding: 0.375rem;
-        cursor: pointer;
-        color: var(--color-text-muted);
-        border-radius: 4px;
-        transition: all 200ms ease;
-    }
-
-    .btn-view-details:hover {
-        background-color: var(--color-surface-hover);
-        color: var(--color-accent);
+    .pie-container {
+        height: 250px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     /* 响应式 */
     @media (max-width: 1200px) {
-        .bento-grid {
-            grid-template-columns: repeat(2, 1fr);
+        .hero-section {
+            grid-template-columns: 1fr;
         }
         
-        .bento-status,
-        .bento-controls,
-        .bento-activity,
-        .bento-chart,
-        .bento-websites {
-            grid-column: span 2;
+        .system-title {
+            text-align: center;
+            flex-direction: row;
+            justify-content: center;
+            gap: 1rem;
+        }
+        
+        .system-title .title-main,
+        .system-title .title-sub {
+            font-size: 2rem;
+        }
+        
+        .stats-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .footer-controls {
+            grid-template-columns: repeat(2, 1fr);
         }
     }
 
     @media (max-width: 768px) {
-        .bento-grid {
+        .system-title {
+            flex-direction: column;
+            gap: 0;
+        }
+        
+        .system-title .title-main {
+            font-size: 2.5rem;
+        }
+        
+        .system-title .title-sub {
+            font-size: 1.5rem;
+        }
+        
+        .footer-controls {
             grid-template-columns: 1fr;
         }
         
-        .bento-status,
-        .bento-stat,
-        .bento-controls,
-        .bento-activity,
-        .bento-chart,
-        .bento-websites {
-            grid-column: span 1;
-        }
-
-        .control-buttons .btn {
+        .bento-controls .control-buttons .btn {
             min-width: 100%;
         }
     }
@@ -436,6 +460,7 @@
 <script>
     const API_BASE = '';
     let dailyChart = null;
+    let sourcePieChart = null;
 
     function fetchJSON(url) {
         return fetch(url).then(r => r.json());
@@ -482,7 +507,7 @@
         fetchJSON('/api/recent_stats').then(response => {
             if (response.success && response.stats) {
                 updateChart(response.stats);
-                document.getElementById('stats-update-time').textContent = new Date().toLocaleTimeString('zh-CN');
+                updateSourcePieChart(response.stats);
             }
         });
     }
@@ -527,6 +552,76 @@
                         beginAtZero: true,
                         grid: { color: 'rgba(255,255,255,0.05)' },
                         ticks: { color: '#94A3B8' }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateSourcePieChart(stats) {
+        const sourceTotals = stats.source_totals || [];
+        
+        if (sourceTotals.length === 0) {
+            const ctx = document.getElementById('sourcePieChart').getContext('2d');
+            if (sourcePieChart) sourcePieChart.destroy();
+            sourcePieChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['暂无数据'],
+                    datasets: [{
+                        data: [1],
+                        backgroundColor: ['rgba(148, 163, 184, 0.3)'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94A3B8', padding: 10 }
+                        }
+                    }
+                }
+            });
+            return;
+        }
+
+        const colors = [
+            '#22C55E', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6',
+            '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1',
+            '#14B8A6', '#A855F7', '#D946EF', '#0EA5E9', '#22D3EE',
+            '#A3E635', '#FBBF24', '#FB923C'
+        ];
+        
+        const ctx = document.getElementById('sourcePieChart').getContext('2d');
+        
+        if (sourcePieChart) sourcePieChart.destroy();
+        
+        sourcePieChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: sourceTotals.map(s => s.source),
+                datasets: [{
+                    data: sourceTotals.map(s => s.count),
+                    backgroundColor: sourceTotals.map((_, i) => colors[i % colors.length]),
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { 
+                            color: '#94A3B8', 
+                            padding: 8,
+                            font: { size: 10 }
+                        }
                     }
                 }
             }

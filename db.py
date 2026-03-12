@@ -603,13 +603,28 @@ class DatabaseManager:
                 all_websites.update(date_data.keys())
             all_websites = sorted(list(all_websites))
             
+            # 计算来源汇总（用于饼图）
+            source_totals = []
+            source_map = {}
+            for row in rows:
+                website = row['source_website']
+                count = row['count']
+                if website in source_map:
+                    source_map[website] += count
+                else:
+                    source_map[website] = count
+            
+            for website, count in sorted(source_map.items(), key=lambda x: x[1], reverse=True):
+                source_totals.append({"source": website, "count": count})
+            
             return {
                 "days": days,
                 "start_date": str(start_date),
                 "end_date": str(end_date),
                 "daily_totals": daily_totals,  # 按日期倒序排列
                 "website_distribution": website_distribution,
-                "all_websites": all_websites
+                "all_websites": all_websites,
+                "source_totals": source_totals  # 来源汇总用于饼图
             }
             
         except sqlite3.Error as e:
