@@ -529,10 +529,16 @@
     }
 
     @media (max-width: 768px) {
+        .hero-section {
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+        }
+        
         .system-title {
             flex-direction: column;
             gap: 0;
             text-align: center;
+            min-width: auto;
         }
         
         .system-title .title-main {
