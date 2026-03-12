@@ -153,11 +153,6 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                         立即检查
                     </button>
-                    
-                    <button id="send-unsent-btn" class="btn btn-outline">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                        发送待发
-                    </button>
                 </div>
             </div>
         </div>
@@ -907,20 +902,6 @@
                     setTimeout(() => location.reload(), 1500);
                 } else {
                     showToast(r.error || '检查失败', 'error');
-                }
-            });
-        });
-
-        document.getElementById('send-unsent-btn').addEventListener('click', function() {
-            this.disabled = true;
-            this.innerHTML = '<span class="loading"></span>发送中...';
-            postJSON('/api/send_unsent').then(r => {
-                this.disabled = false;
-                this.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> 发送待发';
-                if (r.success) {
-                    showToast(r.message, 'success');
-                } else {
-                    showToast(r.error || '发送失败', 'error');
                 }
             });
         });

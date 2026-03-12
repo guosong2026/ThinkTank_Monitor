@@ -85,13 +85,8 @@
 
     <!-- 统计卡片 -->
     <div class="bento-card bento-stat">
-        <div class="stat-value">{{ reports|length }}</div>
-        <div class="stat-label">当前显示</div>
-    </div>
-
-    <div class="bento-card bento-stat">
-        <div class="stat-value" id="total-db">--</div>
-        <div class="stat-label">数据库总量</div>
+        <div class="stat-value">{{ reports|length }} / <span id="total-db">--</span></div>
+        <div class="stat-label">当前显示 / 数据库总量</div>
     </div>
 
     <!-- 操作面板 -->
@@ -107,10 +102,6 @@
             <button id="check-now-btn" class="btn btn-primary w-100 mb-2">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                 立即检查
-            </button>
-            <button id="send-all-btn" class="btn btn-outline w-100 mb-2">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                发送待发
             </button>
             <button id="export-filter-btn" class="btn btn-outline w-100">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -402,20 +393,6 @@
                     setTimeout(() => location.reload(), 1500);
                 } else {
                     showToast(r.error || '检查失败', 'error');
-                }
-            });
-        });
-
-        document.getElementById('send-all-btn').addEventListener('click', function() {
-            this.disabled = true;
-            this.innerHTML = '<span class="loading"></span>发送中...';
-            postJSON('/api/send_unsent').then(r => {
-                this.disabled = false;
-                this.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> 发送待发';
-                if (r.success) {
-                    showToast(r.message, 'success');
-                } else {
-                    showToast(r.error || '发送失败', 'error');
                 }
             });
         });
