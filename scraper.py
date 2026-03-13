@@ -99,11 +99,12 @@ class WebsiteScraper:
                 # 分别设置连接超时和读取超时：连接超时15秒，读取超时45秒
                 response = self.session.get(url, timeout=(15, 45), proxies=proxies, verify=False)
                 response.raise_for_status()
-                
-                # 检查内容类型
+
+                # 检查内容类型，支持HTML和RSS/XML
                 content_type = response.headers.get('content-type', '').lower()
-                if 'text/html' not in content_type:
-                    logger.warning(f"返回的内容类型不是HTML: {content_type}")
+                allowed_types = ['text/html', 'application/rss+xml', 'application/xml', 'text/xml']
+                if not any(t in content_type for t in allowed_types):
+                    logger.warning(f"返回的内容类型不是HTML或RSS: {content_type}")
                 
                 return response.text
                 

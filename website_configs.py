@@ -2480,6 +2480,66 @@ def world_bank_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     return unique_reports
 
 
+def sciencedirect_rss_parser(rss_content: str, base_url: str) -> List[Dict[str, str]]:
+    """
+    ScienceDirect RSS 解析器
+    用于解析期刊RSS订阅，获取最新文章
+    """
+    import re
+    import xml.etree.ElementTree as ET
+
+    if not rss_content:
+        return []
+
+    reports = []
+
+    try:
+        root = ET.fromstring(rss_content)
+        channel = root.find('channel')
+        if channel is None:
+            return []
+
+        items = channel.findall('item')
+
+        for item in items:
+            title_elem = item.find('title')
+            link_elem = item.find('link')
+            desc_elem = item.find('description')
+
+            if title_elem is None or link_elem is None:
+                continue
+
+            title = title_elem.text or ''
+            if not title:
+                continue
+
+            title = ' '.join(title.split())
+
+            link = link_elem.text or ''
+
+            publish_date = None
+            if desc_elem is not None and desc_elem.text:
+                desc = desc_elem.text
+                date_match = re.search(r'Publication date: ([^<]+)', desc)
+                if date_match:
+                    publish_date = date_match.group(1).strip()
+
+            if link:
+                reports.append({
+                    'title': title,
+                    'url': link,
+                    'source': 'Land Use Policy',
+                    'publish_date': publish_date
+                })
+
+    except ET.ParseError as e:
+        logging.warning(f"RSS解析错误: {e}")
+    except Exception as e:
+        logging.warning(f"处理RSS内容时出错: {e}")
+
+    return reports
+
+
 # ============================================================================
 # 测试函数
 # ============================================================================
@@ -2567,11 +2627,11 @@ DEFAULT_WEBSITES = [
         url="https://www.nature.com/natcities/reviews-and-analysis",
         parser_func=nature_cities_parser
     ),
-    # World Bank - 低优先级：网站使用动态加载，可能无法抓取
+    # Land Use Policy - ScienceDirect期刊RSS
     WebsiteConfig(
-        name="World Bank",
-        url="https://documents.worldbank.org/en/publication/documents-reports",
-        parser_func=world_bank_parser
+        name="Land Use Policy",
+        url="https://rss.sciencedirect.com/publication/science/02648377",
+        parser_func=sciencedirect_rss_parser
     ),
 ]
 
