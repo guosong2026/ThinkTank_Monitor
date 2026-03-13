@@ -1948,76 +1948,125 @@ def iucn_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
 def stockholm_resilience_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     """
     Stockholm Resilience Centre 出版物页面解析器
-    页面有研究链接和出版物链接
+    页面包含research-stories和research-news
     """
     from bs4 import BeautifulSoup
-    
+
     if not html_content:
         return []
-    
+
     reports = []
     soup = BeautifulSoup(html_content, 'lxml')
-    
-    # Stockholm Resilience特定选择器（基于分析）
+
+    # 排除非内容链接的关键词
+    exclude_keywords = [
+        'home', 'about', 'contact', 'privacy', 'terms', 'login',
+        'signup', 'subscribe', 'twitter', 'facebook', 'linkedin',
+        'instagram', 'youtube', 'rss', 'feed', 'search', 'donate',
+        'careers', 'press', 'media', 'newsletter', 'cookie',
+        'meet-our-team', 'annual-reports', 'research-projects',
+        'our-research-culture', 'principles-for-research-ethics',
+        'resilience-dictionary', 'planetary-boundaries'
+    ]
+
+    # Stockholm Resilience特定选择器 - 针对research stories/news
     selectors = [
-        'article.publication a',
-        '.publication-item a',
-        '.publication a',
+        '.content a',
+        'main a',
+        '.main-content a',
         'article a',
-        '.research a',
-        '.resource a',
+        '.publication a',
         '.item a',
+        '.post a',
+        '.news-item a',
         'h3 a',
         'h2 a',
         '.title a'
     ]
-    
+
     for selector in selectors:
         links = soup.select(selector)
         if links:
             for link in links:
                 title = link.text.strip()
                 href = link.get('href', '')
-                
-                if href and title:
-                    full_url = urljoin(base_url, href)
-                    # 检查是否是出版物或研究链接
-                    if any(pattern in full_url.lower() for pattern in 
-                          ['/publication/', '/research/', '/report/', '/article/']):
+
+                if not href or not title:
+                    continue
+
+                # 清理标题 - 移除多余空白
+                title = ' '.join(title.split())
+
+                # 排除标题太短或包含排除关键词的链接
+                if len(title) < 15:
+                    continue
+
+                # 排除非内容页面
+                href_lower = href.lower()
+                if any(kw in href_lower for kw in exclude_keywords):
+                    continue
+
+                # 检查是否是研究故事/新闻/出版物链接
+                # 包含 /research-stories/ 或 /research-news/ 或 /publications/
+                if any(pattern in href_lower for pattern in
+                      ['/research-stories/', '/research-news/', '/publications/']):
+                    # 排除页面类型链接
+                    skip_patterns = ['type=', '?page', '#', 'meet-our-team']
+                    if any(p in href_lower for p in skip_patterns):
+                        continue
+
+                    # 进一步清理标题
+                    # 移除 "Research story|2026-02-27" 这种前缀
+                    import re
+                    title = re.sub(r'^(Research story|General news|Research story)\s*\|\s*\d{4}-\d{2}-\d{2}\s*', '', title)
+
+                    # 移除 "Read more" 等
+                    read_more_patterns = ['read more', 'read more »', 'learn more', 'click here']
+                    for pattern in read_more_patterns:
+                        title = re.sub(pattern, '', title, flags=re.IGNORECASE).strip()
+
+                    if len(title) >= 15:
+                        full_url = urljoin(base_url, href)
                         reports.append({
                             'title': title,
                             'url': full_url,
                             'source': 'Stockholm Resilience'
                         })
             break
-    
+
     # 如果上述选择器都没找到，查找包含特定路径的链接
     if not reports:
         all_links = soup.find_all('a', href=True)
         for link in all_links:
-            href = link['href']
+            href = link.get('href', '')
             title = link.text.strip()
-            
-            # 过滤可能的出版物或研究链接
-            if (('/publication/' in href.lower() or 
-                 '/research/' in href.lower() or 
-                 '/report/' in href.lower() or
-                 '/article/' in href.lower()) and 
-                len(title) > 10):
-                full_url = urljoin(base_url, href)
-                reports.append({
-                    'title': title,
-                    'url': full_url,
-                    'source': 'Stockholm Resilience'
-                })
-    
-    # 清理标题
-    for report in reports:
-        title = report['title']
-        title = ' '.join(title.split())
-        if len(title) > 10:
-            report['title'] = title
-    
+
+            if not href or not title:
+                continue
+
+            title = ' '.join(title.split())
+            href_lower = href.lower()
+
+            # 排除非内容链接
+            if any(kw in href_lower for kw in exclude_keywords):
+                continue
+
+            # 过滤可能的研究故事/新闻链接
+            if (any(pattern in href_lower for pattern in
+                   ['/research-stories/', '/research-news/', '/publications/']) and
+                len(title) >= 15):
+                # 清理标题
+                import re
+                title = re.sub(r'^(Research story|General news)\s*\|\s*\d{4}-\d{2}-\d{2}\s*', '', title)
+
+                if len(title) >= 15:
+                    full_url = urljoin(base_url, href)
+                    reports.append({
+                        'title': title,
+                        'url': full_url,
+                        'source': 'Stockholm Resilience'
+                    })
+
     # 去重
     unique_reports = []
     seen_urls = set()
@@ -2025,7 +2074,7 @@ def stockholm_resilience_parser(html_content: str, base_url: str) -> List[Dict[s
         if report['url'] not in seen_urls:
             seen_urls.add(report['url'])
             unique_reports.append(report)
-    
+
     return unique_reports
 
 
@@ -2035,14 +2084,47 @@ def biodiversity_council_parser(html_content: str, base_url: str) -> List[Dict[s
     页面按类别过滤（Report类别）
     """
     from bs4 import BeautifulSoup
-    
+    import re
+
     if not html_content:
         return []
-    
+
     reports = []
     soup = BeautifulSoup(html_content, 'lxml')
-    
-    # Biodiversity Council特定选择器（基于分析）
+
+    # 辅助函数：从父元素或兄弟元素提取标题
+    def extract_title_from_link(link):
+        """从链接或其周围元素提取正确的标题"""
+        link_text = link.get_text(strip=True)
+
+        # 如果标题已经有意义，直接返回
+        if link_text and len(link_text) > 15:
+            # 排除 "Read More", "Learn More" 等
+            if link_text.lower() not in ['read more', 'read more »', 'learn more', 'learn more »', 'click here']:
+                return link_text
+
+        # 尝试从父元素获取标题
+        parent = link.parent
+        if parent:
+            # 查找父元素中的标题标签
+            title_tags = parent.find_all(['h1', 'h2', 'h3', 'h4', 'strong', 'b', 'span'])
+            for tag in title_tags:
+                tag_text = tag.get_text(strip=True)
+                if tag_text and len(tag_text) > 15:
+                    return tag_text
+
+            # 查找前面的兄弟元素作为标题
+            prev_sibling = link.previous_sibling
+            while prev_sibling:
+                if hasattr(prev_sibling, 'get_text'):
+                    text = prev_sibling.get_text(strip=True)
+                    if text and len(text) > 15:
+                        return text
+                prev_sibling = prev_sibling.previous_sibling
+
+        return link_text
+
+    # Biodiversity Council特定选择器
     selectors = [
         'article a',
         '.resource a',
@@ -2055,52 +2137,76 @@ def biodiversity_council_parser(html_content: str, base_url: str) -> List[Dict[s
         '.title a',
         'a[href*="/resources/"]'
     ]
-    
+
     for selector in selectors:
         links = soup.select(selector)
         if links:
             for link in links:
-                title = link.text.strip()
                 href = link.get('href', '')
-                
-                if href and title:
-                    full_url = urljoin(base_url, href)
-                    # 检查是否是资源或报告链接
-                    if any(pattern in full_url.lower() for pattern in 
-                          ['/resources/', '/report/', '/publication/']):
-                        reports.append({
-                            'title': title,
-                            'url': full_url,
-                            'source': 'Biodiversity Council'
-                        })
+
+                if not href:
+                    continue
+
+                # 提取标题
+                title = extract_title_from_link(link)
+
+                if not title:
+                    continue
+
+                # 清理标题
+                title = ' '.join(title.split())
+
+                # 跳过无效标题
+                if len(title) < 15:
+                    continue
+
+                # 排除导航链接
+                exclude_patterns = ['privacy', 'terms', 'contact', 'about', 'home', 'cookie']
+                if any(p in title.lower() for p in exclude_patterns):
+                    continue
+
+                full_url = urljoin(base_url, href)
+
+                # 检查是否是资源或报告链接
+                if any(pattern in full_url.lower() for pattern in
+                      ['/resources/', '/report/', '/publication/']):
+                    reports.append({
+                        'title': title,
+                        'url': full_url,
+                        'source': 'Biodiversity Council'
+                    })
             break
-    
+
     # 如果上述选择器都没找到，查找所有链接
     if not reports:
         all_links = soup.find_all('a', href=True)
         for link in all_links:
-            href = link['href']
-            title = link.text.strip()
-            
+            href = link.get('href', '')
+            title = extract_title_from_link(link)
+
+            if not href or not title:
+                continue
+
+            title = ' '.join(title.split())
+
+            if len(title) < 15:
+                continue
+
+            # 排除导航链接
+            if any(p in title.lower() for p in ['privacy', 'terms', 'contact', 'about', 'home', 'cookie', 'read more', 'learn more']):
+                continue
+
             # 过滤可能的报告或资源链接
-            if (('/resources/' in href.lower() or 
-                 '/report/' in href.lower() or 
-                 '/publication/' in href.lower()) and 
-                len(title) > 10):
+            if (('/resources/' in href.lower() or
+                 '/report/' in href.lower() or
+                 '/publication/' in href.lower())):
                 full_url = urljoin(base_url, href)
                 reports.append({
                     'title': title,
                     'url': full_url,
                     'source': 'Biodiversity Council'
                 })
-    
-    # 清理标题
-    for report in reports:
-        title = report['title']
-        title = ' '.join(title.split())
-        if len(title) > 10:
-            report['title'] = title
-    
+
     # 去重
     unique_reports = []
     seen_urls = set()
@@ -2108,7 +2214,7 @@ def biodiversity_council_parser(html_content: str, base_url: str) -> List[Dict[s
         if report['url'] not in seen_urls:
             seen_urls.add(report['url'])
             unique_reports.append(report)
-    
+
     return unique_reports
 
 
@@ -2281,75 +2387,88 @@ def nature_cities_parser(html_content: str, base_url: str) -> List[Dict[str, str
 
 def world_bank_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     """
-    World Bank Open Knowledge 搜索页面解析器
-    页面URL已筛选为Urban Development主题
+    World Bank Documents & Reports 页面解析器
+    适配新URL: documents.worldbank.org
     """
     from bs4 import BeautifulSoup
-    
+
     if not html_content:
         return []
-    
+
     reports = []
     soup = BeautifulSoup(html_content, 'lxml')
-    
+
     # 导入WebsiteConfig以使用其清理和过滤方法
     from website_configs import WebsiteConfig
     config = WebsiteConfig('World Bank', base_url)
-    
-    # World Bank Open Knowledge特定选择器
-    # 该网站使用DSpace架构，通常有.ds-search-result等类
+
+    # World Bank Documents 页面选择器
     selectors = [
-        '.ds-search-result a',
-        '.artifact-title a',
-        '.metadata a',
-        '.title a',
+        '.card a',
+        '.document a',
+        '.publication a',
+        '.result a',
+        'article a',
+        '.item a',
         'h3 a',
         'h2 a',
-        '.item-title a',
-        '.record-title a',
-        '.document-title a',
-        '.result-item a'
+        '.title a',
+        '.doc-title a'
     ]
-    
+
     for selector in selectors:
         links = soup.select(selector)
         if links:
             for link in links:
                 title = link.text.strip()
                 href = link.get('href', '')
-                
-                if href and title:
-                    full_url = urljoin(base_url, href)
-                    # 清理标题
-                    cleaned_title = config._clean_title(title)
-                    if not cleaned_title:
-                        continue
-                    # 检查是否是文档链接
-                    if '/handle/' in full_url.lower() or '/bitstream/' in full_url.lower() or '/entities/' in full_url.lower():
-                        if config._is_report_link(full_url, cleaned_title):
-                            reports.append({
-                                'title': cleaned_title,
-                                'url': full_url,
-                                'source': 'World Bank'
-                            })
-    
-    # 如果没找到，尝试通用方法：查找所有包含'/handle/'的链接
+
+                if not href or not title:
+                    continue
+
+                # 清理标题
+                title = ' '.join(title.split())
+
+                if len(title) < 15:
+                    continue
+
+                full_url = urljoin(base_url, href)
+
+                # 检查是否是文档链接
+                if '/document/' in full_url.lower() or '/report/' in full_url.lower():
+                    if config._is_report_link(full_url, title):
+                        reports.append({
+                            'title': title,
+                            'url': full_url,
+                            'source': 'World Bank'
+                        })
+            break
+
+    # 如果没找到，尝试通用方法
     if not reports:
         all_links = soup.find_all('a', href=True)
         for link in all_links:
             href = link.get('href', '')
             title = link.text.strip()
-            if href and title:
-                if '/handle/' in href.lower() or '/bitstream/' in href.lower():
-                    full_url = urljoin(base_url, href)
-                    cleaned_title = config._clean_title(title)
-                    if cleaned_title and config._is_report_link(full_url, cleaned_title):
-                        reports.append({
-                            'title': cleaned_title,
-                            'url': full_url,
-                            'source': 'World Bank'
-                        })
-    
+
+            if not href or not title:
+                continue
+
+            title = ' '.join(title.split())
+
+            if len(title) < 15:
+                continue
+
+            # 检查是否是文档链接
+            if '/document/' in href.lower() or '/report/' in href.lower():
+                full_url = urljoin(base_url, href)
+                if config._is_report_link(full_url, title):
+                    reports.append({
+                        'title': title,
+                        'url': full_url,
+                        'source': 'World Bank'
+                    })
+
     # 去重
     unique_reports = []
     seen_urls = set()
@@ -2357,7 +2476,7 @@ def world_bank_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
         if report['url'] not in seen_urls:
             seen_urls.add(report['url'])
             unique_reports.append(report)
-    
+
     return unique_reports
 
 
@@ -2448,9 +2567,10 @@ DEFAULT_WEBSITES = [
         url="https://www.nature.com/natcities/reviews-and-analysis",
         parser_func=nature_cities_parser
     ),
+    # World Bank - 低优先级：网站使用动态加载，可能无法抓取
     WebsiteConfig(
         name="World Bank",
-        url="https://openknowledge.worldbank.org/search?query=&f.topic=Urban%20Development,%20equals&spc.page=1",
+        url="https://documents.worldbank.org/en/publication/documents-reports",
         parser_func=world_bank_parser
     ),
 ]
