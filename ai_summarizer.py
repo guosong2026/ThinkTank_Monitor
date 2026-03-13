@@ -39,28 +39,31 @@ class AISummarizer:
     # 火山方舟API配置
     ARK_API_KEY = os.environ.get("ARK_API_KEY", "")
     ARK_BASE_URL = os.environ.get("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3")
-    MODEL_ID = os.environ.get("ARK_MODEL_ID", "doubao-pro-1m-preview-20250515")
+    ARK_ENDPOINT = os.environ.get("ARK_ENDPOINT", "")
 
     # API限流配置
     REQUEST_DELAY = float(os.environ.get("AI_SUMMARY_DELAY", "2.0"))
 
-    def __init__(self, api_key: str = None, model_id: str = None):
+    def __init__(self, api_key: str = None, endpoint: str = None):
         """
         初始化AI总结器
 
         Args:
             api_key: 火山方舟API密钥
-            model_id: 模型ID
+            endpoint: 推理接入点ID
         """
         self.api_key = api_key or self.ARK_API_KEY
-        self.model_id = model_id or self.MODEL_ID
+        self.endpoint = endpoint or self.ARK_ENDPOINT
 
         if not self.api_key:
             logger.warning("火山方舟API密钥未设置，AI总结功能将禁用")
 
+        if not self.endpoint:
+            logger.warning("火山方舟推理接入点未设置，AI总结功能将禁用")
+
     def is_configured(self) -> bool:
         """检查是否已配置"""
-        return bool(self.api_key)
+        return bool(self.api_key and self.endpoint)
 
     def summarize_report(self, url: str, title: str) -> Optional[Dict[str, str]]:
         """
@@ -197,7 +200,8 @@ class AISummarizer:
             API响应内容
         """
         try:
-            url = f"{self.ARK_BASE_URL}/chat/completions"
+            # 使用推理接入点ID构建API URL
+            url = f"{self.ARK_BASE_URL}/{self.endpoint}/chat/completions"
 
             headers = {
                 "Content-Type": "application/json",
@@ -205,7 +209,6 @@ class AISummarizer:
             }
 
             payload = {
-                "model": self.model_id,
                 "messages": [
                     {
                         "role": "user",
