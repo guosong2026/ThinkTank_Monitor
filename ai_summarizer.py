@@ -177,7 +177,7 @@ class AISummarizer:
 3. 生成200字以内的中文总结
 
 输出格式（严格按此格式，不要有其他内容）：
-翻译标题：[中文标题]
+标题：[中文标题]
 关键词：[关键词1], [关键词2], [关键词3]
 总结：[200字以内的中文总结]
 
@@ -201,7 +201,7 @@ class AISummarizer:
         """
         try:
             # 使用推理接入点ID构建API URL
-            url = f"{self.ARK_BASE_URL}/{self.endpoint}/chat/completions"
+            url = f"{self.ARK_BASE_URL}/chat/completions"
 
             headers = {
                 "Content-Type": "application/json",
@@ -209,6 +209,7 @@ class AISummarizer:
             }
 
             payload = {
+                "model": self.endpoint,
                 "messages": [
                     {
                         "role": "user",
@@ -270,7 +271,7 @@ class AISummarizer:
 
             for line in lines:
                 line = line.strip()
-                if line.startswith('翻译标题：') or line.startswith('翻译标题:'):
+                if line.startswith('标题：') or line.startswith('标题:') or line.startswith('翻译标题：') or line.startswith('翻译标题:'):
                     chinese_title = line.split('：', 1)[-1].split(':', 1)[-1].strip()
                 elif line.startswith('关键词：') or line.startswith('关键词:'):
                     keywords = line.split('：', 1)[-1].split(':', 1)[-1].strip()
