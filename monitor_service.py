@@ -797,10 +797,20 @@ class MonitorService:
             
             for report in unsent_reports:
                 try:
+                    # 构建AI总结数据（从数据库中获取）
+                    ai_summary = None
+                    if report.get('ai_summary') or report.get('ai_chinese_title') or report.get('ai_keywords'):
+                        ai_summary = {
+                            'chinese_title': report.get('ai_chinese_title', ''),
+                            'keywords': report.get('ai_keywords', ''),
+                            'summary': report.get('ai_summary', '')
+                        }
+
                     success = email_sender.send_report_notification(
                         title=report['title'],
                         url=report['url'],
-                        source_website=report['source_website']
+                        source_website=report['source_website'],
+                        ai_summary=ai_summary
                     )
                     
                     if success:

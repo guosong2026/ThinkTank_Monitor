@@ -58,7 +58,10 @@ class DatabaseManager:
             source_website TEXT NOT NULL,
             publish_date TEXT,
             discovered_time TIMESTAMP NOT NULL,
-            sent_status INTEGER DEFAULT 0
+            sent_status INTEGER DEFAULT 0,
+            ai_chinese_title TEXT,
+            ai_keywords TEXT,
+            ai_summary TEXT
         )
         """
         
@@ -103,7 +106,10 @@ class DatabaseManager:
             
             # 检查sent_status字段是否存在，如果不存在则添加
             self._add_sent_status_column_if_needed()
-            
+
+            # 检查AI总结字段是否存在，如果不存在则添加
+            self._add_ai_summary_columns_if_needed()
+
             # 初始化默认设置（如果不存在）
             self._initialize_default_settings()
             
@@ -218,6 +224,35 @@ class DatabaseManager:
                 
         except sqlite3.Error as e:
             logger.warning(f"检查/添加sent_status字段失败: {e}")
+
+    def _add_ai_summary_columns_if_needed(self) -> None:
+        """
+        检查并添加AI总结字段（如果不存在）
+
+        用于向后兼容，确保现有表结构包含AI总结字段
+        """
+        try:
+            cursor = self.connection.cursor()
+
+            cursor.execute("PRAGMA table_info(reports)")
+            columns = cursor.fetchall()
+            column_names = [col[1] for col in columns]
+
+            new_columns = [
+                ('ai_chinese_title', 'TEXT'),
+                ('ai_keywords', 'TEXT'),
+                ('ai_summary', 'TEXT')
+            ]
+
+            for col_name, col_type in new_columns:
+                if col_name not in column_names:
+                    logger.info(f"添加{col_name}字段到reports表")
+                    cursor.execute(f"ALTER TABLE reports ADD COLUMN {col_name} {col_type}")
+                    self.connection.commit()
+                    logger.info(f"{col_name}字段添加成功")
+
+        except sqlite3.Error as e:
+            logger.warning(f"检查/添加AI总结字段失败: {e}")
     
     def mark_report_as_sent(self, report_id: int) -> bool:
         """
@@ -245,6 +280,42 @@ class DatabaseManager:
                 
         except sqlite3.Error as e:
             logger.error(f"标记报告为已发送失败: {e}")
+            self.connection.rollback()
+            return False
+
+    def update_ai_summary(self, report_id: int, chinese_title: str, keywords: str, summary: str) -> bool:
+        """
+        更新报告的AI总结
+
+        Args:
+            report_id: 报告ID
+            chinese_title: 中文标题
+            keywords: 关键词
+            summary: 总结
+
+        Returns:
+            bool: 更新是否成功
+        """
+        update_sql = """
+        UPDATE reports
+        SET ai_chinese_title = ?, ai_keywords = ?, ai_summary = ?
+        WHERE id = ?
+        """
+
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(update_sql, (chinese_title, keywords, summary, report_id))
+            self.connection.commit()
+
+            if cursor.rowcount > 0:
+                logger.info(f"报告ID {report_id} AI总结更新成功")
+                return True
+            else:
+                logger.warning(f"未找到报告ID {report_id}")
+                return False
+
+        except sqlite3.Error as e:
+            logger.error(f"更新AI总结失败: {e}")
             self.connection.rollback()
             return False
     

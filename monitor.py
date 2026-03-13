@@ -13,6 +13,7 @@ from db import DatabaseManager
 from scraper import WebsiteScraper
 from email_sender import EmailSender
 from website_configs import WebsiteConfig, get_all_websites
+from ai_summarizer import AISummarizer
 
 # 配置日志
 logging.basicConfig(
@@ -73,6 +74,13 @@ class WebsiteMonitor:
                 logger.error(f"邮件发送器初始化失败: {e}")
                 logger.warning("邮件通知功能将禁用")
                 self.enable_email = False
+
+        # 初始化AI总结器
+        self.ai_summarizer = AISummarizer()
+        if self.ai_summarizer.is_configured():
+            logger.info("AI总结器初始化成功")
+        else:
+            logger.info("AI总结器未配置（ARK_API_KEY未设置），将跳过AI总结")
         
         logger.info(f"初始化网站监控器")
         logger.info(f"目标URL: {target_url}")
@@ -205,14 +213,32 @@ class WebsiteMonitor:
                         new_reports_count += 1
                         # 记录发现的新报告
                         logger.debug(f"发现新报告：{title} - {url}")
-                        
+
+                        # 执行AI总结（仅针对新报告）
+                        ai_summary_data = None
+                        if self.ai_summarizer.is_configured():
+                            try:
+                                logger.info(f"开始AI总结: {title[:30]}...")
+                                ai_summary_data = self.ai_summarizer.summarize_report(url, title)
+                                if ai_summary_data:
+                                    db.update_ai_summary(
+                                        report_id=report_id,
+                                        chinese_title=ai_summary_data['chinese_title'],
+                                        keywords=ai_summary_data['keywords'],
+                                        summary=ai_summary_data['summary']
+                                    )
+                                    logger.info(f"AI总结完成并已保存: {title[:30]}...")
+                            except Exception as ai_error:
+                                logger.error(f"AI总结失败: {ai_error}")
+
                         # 发送邮件通知（如果启用且允许发送邮件）
                         if send_email and self.enable_email and self.email_sender:
                             try:
                                 email_success = self.email_sender.send_report_notification(
                                     title=title,
                                     url=url,
-                                    source_website=self.source_website
+                                    source_website=self.source_website,
+                                    ai_summary=ai_summary_data
                                 )
                                 
                                 if email_success:
@@ -512,7 +538,14 @@ class MultiWebsiteMonitor:
                 logger.error(f"邮件发送器初始化失败: {e}")
                 logger.warning("邮件通知功能将禁用")
                 self.enable_email = False
-        
+
+        # 初始化AI总结器
+        self.ai_summarizer = AISummarizer()
+        if self.ai_summarizer.is_configured():
+            logger.info("AI总结器初始化成功")
+        else:
+            logger.info("AI总结器未配置（ARK_API_KEY未设置），将跳过AI总结")
+
         logger.info(f"初始化多网站监控器")
         logger.info(f"监控网站数量: {len(website_configs)}")
         logger.info(f"数据库: {db_path}")
@@ -725,14 +758,32 @@ class MultiWebsiteMonitor:
                         new_reports_count += 1
                         # 记录发现的新报告
                         logger.debug(f"发现新报告 [{config.name}]：{title} - {url}")
-                        
+
+                        # 执行AI总结（仅针对新报告）
+                        ai_summary_data = None
+                        if self.ai_summarizer.is_configured():
+                            try:
+                                logger.info(f"开始AI总结: {title[:30]}...")
+                                ai_summary_data = self.ai_summarizer.summarize_report(url, title)
+                                if ai_summary_data:
+                                    db.update_ai_summary(
+                                        report_id=report_id,
+                                        chinese_title=ai_summary_data['chinese_title'],
+                                        keywords=ai_summary_data['keywords'],
+                                        summary=ai_summary_data['summary']
+                                    )
+                                    logger.info(f"AI总结完成并已保存: {title[:30]}...")
+                            except Exception as ai_error:
+                                logger.error(f"AI总结失败: {ai_error}")
+
                         # 发送邮件通知（如果启用且允许发送邮件）
                         if send_email and self.enable_email and self.email_sender:
                             try:
                                 email_success = self.email_sender.send_report_notification(
                                     title=title,
                                     url=url,
-                                    source_website=source
+                                    source_website=source,
+                                    ai_summary=ai_summary_data
                                 )
                                 
                                 if email_success:

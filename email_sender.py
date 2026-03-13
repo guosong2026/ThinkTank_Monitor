@@ -101,15 +101,16 @@ class EmailSender:
         logger.info(f"发件人: {self.sender_email}")
         logger.info(f"收件人: {self.recipient_emails}")
     
-    def send_report_notification(self, title: str, url: str, source_website: str) -> bool:
+    def send_report_notification(self, title: str, url: str, source_website: str, ai_summary: dict = None) -> bool:
         """
         发送报告通知邮件
-        
+
         Args:
             title: 报告标题
             url: 报告链接
             source_website: 来源网站
-            
+            ai_summary: AI总结数据，包含chinese_title, keywords, summary
+
         Returns:
             bool: 发送是否成功
         """
@@ -118,27 +119,36 @@ class EmailSender:
             logger.error("无法发送邮件：收件人邮箱列表为空")
             logger.error("请通过环境变量 RECIPIENT_EMAILS 设置收件人邮箱")
             return False
-        
+
         # 检查发件人配置
         if not self.sender_email or not self.sender_password:
             logger.error("无法发送邮件：发件人邮箱或SMTP授权码未设置")
             logger.error("请通过环境变量 SENDER_EMAIL 和 SENDER_PASSWORD 设置发件人信息")
             return False
-        
+
         # 构建邮件内容
         subject = f"{self.EMAIL_SUBJECT_PREFIX}来自{source_website}的新发布"
-        
+
         # 邮件正文格式
-        body = f"""【新报告监控】来自{source_website}的新发布
+        body_lines = [f"【新报告监控】来自{source_website}的新发布", "", "标题：" + title, "链接：" + url]
 
-标题：{title}
-链接：{url}
+        # 添加AI总结内容
+        if ai_summary:
+            body_lines.append("")
+            body_lines.append("=" * 40)
+            body_lines.append("【AI智能总结】")
+            body_lines.append("=" * 40)
+            body_lines.append(f"翻译标题：{ai_summary.get('chinese_title', '')}")
+            body_lines.append(f"关键词：{ai_summary.get('keywords', '')}")
+            body_lines.append(f"总结：{ai_summary.get('summary', '')}")
 
-发现时间：{self._get_current_time()}
+        body_lines.append("")
+        body_lines.append(f"发现时间：{self._get_current_time()}")
+        body_lines.append("")
+        body_lines.append("---")
+        body_lines.append("此邮件由网站监控工具自动发送")
 
----
-此邮件由网站监控工具自动发送
-"""
+        body = "\n".join(body_lines)
         
         try:
             # 创建邮件消息

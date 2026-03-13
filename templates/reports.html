@@ -34,6 +34,7 @@
                     <thead>
                         <tr>
                             <th>标题</th>
+                            <th>AI总结</th>
                             <th>来源</th>
                             <th>时间</th>
                             <th>状态</th>
@@ -47,6 +48,17 @@
                                 <td>
                                     <div class="report-title">{{ report.title }}</div>
                                     <a href="{{ report.url }}" target="_blank" class="report-url">{{ report.url[:40] }}...</a>
+                                </td>
+                                <td>
+                                    {% if report.ai_chinese_title or report.ai_keywords or report.ai_summary %}
+                                    <div class="ai-summary">
+                                        <div class="ai-title">{{ report.ai_chinese_title }}</div>
+                                        <div class="ai-keywords">{{ report.ai_keywords }}</div>
+                                        <div class="ai-summary-text">{{ report.ai_summary }}</div>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
                                 </td>
                                 <td><span class="badge badge-success">{{ report.source_website }}</span></td>
                                 <td class="text-muted">{{ report.discovered_time[:19] if report.discovered_time else '' }}</td>
@@ -66,7 +78,7 @@
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="5" class="text-center text-muted">暂无报告数据</td>
+                                <td colspan="6" class="text-center text-muted">暂无报告数据</td>
                             </tr>
                         {% endif %}
                     </tbody>
@@ -259,6 +271,31 @@
     .report-url {
         font-size: 0.75rem;
         color: var(--color-accent);
+    }
+
+    .ai-summary {
+        max-width: 250px;
+        font-size: 0.75rem;
+    }
+
+    .ai-title {
+        font-weight: 600;
+        color: var(--color-accent);
+        margin-bottom: 0.25rem;
+    }
+
+    .ai-keywords {
+        color: var(--color-text-muted);
+        font-size: 0.7rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .ai-summary-text {
+        color: var(--color-text);
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
 
     .table-footer {
