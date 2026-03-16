@@ -38,7 +38,6 @@
                             <th>AI总结</th>
                             <th>来源</th>
                             <th>时间</th>
-                            <th>操作</th>
                         </tr>
                     </thead>
                     <tbody id="reports-table-body">
@@ -68,16 +67,11 @@
                                 </td>
                                 <td><span class="badge badge-success">{{ report.source_website }}</span></td>
                                 <td class="text-muted">{{ report.discovered_time[:19] if report.discovered_time else '' }}</td>
-                                <td>
-                                    <a href="{{ report.url }}" target="_blank" class="btn-icon" title="打开链接">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                                    </a>
-                                </td>
                             </tr>
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="6" class="text-center text-muted">暂无报告数据</td>
+                                <td colspan="5" class="text-center text-muted">暂无报告数据</td>
                             </tr>
                         {% endif %}
                     </tbody>
@@ -259,14 +253,11 @@
         white-space: nowrap;
     }
 
-    .table th:nth-child(1) { width: 35%; }
-    .table th:nth-child(2) { width: 25%; }
+    .table th:nth-child(1) { width: 38%; }
+    .table th:nth-child(2) { width: 28%; }
     .table th:nth-child(3) { width: 12%; }
-    .table th:nth-child(4) { width: 13%; }
+    .table th:nth-child(4) { width: 12%; }
     .table th:nth-child(5) { width: 10%; }
-    .table th:nth-child(6) { width: 5%; text-align: center; }
-
-    .table td:nth-child(6) { text-align: center; }
 
     .table tbody tr {
         transition: background-color 150ms ease;
