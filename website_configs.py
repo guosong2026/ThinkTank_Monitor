@@ -2025,6 +2025,13 @@ def stockholm_resilience_parser(html_content: str, base_url: str) -> List[Dict[s
                     for pattern in read_more_patterns:
                         title = re.sub(pattern, '', title, flags=re.IGNORECASE).strip()
 
+                    # 清理标题中的出版物类型、日期和作者信息
+                    # 格式: "Title Journal / article | 2026 Author..." -> "Title"
+                    title = re.sub(r'\s*/\s*\w+\s*\|.*$', '', title)
+                    title = re.sub(r'\s*\|\s*\d{4}.*$', '', title)
+                    title = re.sub(r'\s+(Journal|Science|Nature|Paper|Research|Report|Book|Chapter)$', '', title, flags=re.IGNORECASE)
+                    title = title.strip()
+
                     if len(title) >= 15:
                         full_url = urljoin(base_url, href)
                         reports.append({
@@ -2058,6 +2065,12 @@ def stockholm_resilience_parser(html_content: str, base_url: str) -> List[Dict[s
                 # 清理标题
                 import re
                 title = re.sub(r'^(Research story|General news)\s*\|\s*\d{4}-\d{2}-\d{2}\s*', '', title)
+
+                # 清理标题中的出版物类型、日期和作者信息
+                title = re.sub(r'\s*/\s*\w+\s*\|.*$', '', title)
+                title = re.sub(r'\s*\|\s*\d{4}.*$', '', title)
+                title = re.sub(r'\s+(Journal|Science|Nature|Paper|Research|Report|Book|Chapter)$', '', title, flags=re.IGNORECASE)
+                title = title.strip()
 
                 if len(title) >= 15:
                     full_url = urljoin(base_url, href)
