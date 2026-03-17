@@ -283,6 +283,42 @@ class DatabaseManager:
             self.connection.rollback()
             return False
 
+    def update_ai_summary_by_url(self, url: str, chinese_title: str, keywords: str, summary: str) -> bool:
+        """
+        通过URL更新报告的AI总结（更可靠的方法）
+
+        Args:
+            url: 报告URL
+            chinese_title: 中文标题
+            keywords: 关键词
+            summary: 总结
+
+        Returns:
+            bool: 更新是否成功
+        """
+        update_sql = """
+        UPDATE reports
+        SET ai_chinese_title = ?, ai_keywords = ?, ai_summary = ?
+        WHERE url = ?
+        """
+
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(update_sql, (chinese_title, keywords, summary, url))
+            self.connection.commit()
+
+            if cursor.rowcount > 0:
+                logger.info(f"报告URL {url} AI总结更新成功")
+                return True
+            else:
+                logger.warning(f"未找到报告URL: {url}")
+                return False
+
+        except sqlite3.Error as e:
+            logger.error(f"更新AI总结失败: {e}")
+            self.connection.rollback()
+            return False
+
     def update_ai_summary(self, report_id: int, chinese_title: str, keywords: str, summary: str) -> bool:
         """
         更新报告的AI总结

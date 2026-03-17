@@ -221,8 +221,8 @@ class WebsiteMonitor:
                                 logger.info(f"开始AI总结: {title[:30]}...")
                                 ai_summary_data = self.ai_summarizer.summarize_report(url, title)
                                 if ai_summary_data:
-                                    db.update_ai_summary(
-                                        report_id=report_id,
+                                    db.update_ai_summary_by_url(
+                                        url=url,
                                         chinese_title=ai_summary_data['chinese_title'],
                                         keywords=ai_summary_data['keywords'],
                                         summary=ai_summary_data['summary']
@@ -766,8 +766,8 @@ class MultiWebsiteMonitor:
                                 logger.info(f"开始AI总结: {title[:30]}...")
                                 ai_summary_data = self.ai_summarizer.summarize_report(url, title)
                                 if ai_summary_data:
-                                    db.update_ai_summary(
-                                        report_id=report_id,
+                                    db.update_ai_summary_by_url(
+                                        url=url,
                                         chinese_title=ai_summary_data['chinese_title'],
                                         keywords=ai_summary_data['keywords'],
                                         summary=ai_summary_data['summary']
