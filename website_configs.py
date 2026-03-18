@@ -65,6 +65,14 @@ class WebsiteConfig:
                 seen_urls.add(report['url'])
                 unique_reports.append(report)
         
+        # 限制只返回最新的报告（最多6个），避免抓取过多历史报告
+        MAX_REPORTS_PER_SITE = 6
+        if len(unique_reports) > MAX_REPORTS_PER_SITE:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"{self.name}: 限制返回报告数量为 {MAX_REPORTS_PER_SITE} 个（共 {len(unique_reports)} 个）")
+            unique_reports = unique_reports[:MAX_REPORTS_PER_SITE]
+        
         return unique_reports
     
     def _default_parser(self, html_content: str, base_url: str) -> List[Dict[str, str]]:
@@ -134,6 +142,14 @@ class WebsiteConfig:
             if report['url'] not in seen_urls:
                 seen_urls.add(report['url'])
                 unique_reports.append(report)
+        
+        # 限制只返回最新的报告（最多6个），避免抓取过多历史报告
+        MAX_REPORTS_PER_SITE = 6
+        if len(unique_reports) > MAX_REPORTS_PER_SITE:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"默认解析器: 限制返回报告数量为 {MAX_REPORTS_PER_SITE} 个（共 {len(unique_reports)} 个）")
+            unique_reports = unique_reports[:MAX_REPORTS_PER_SITE]
         
         return unique_reports
     
@@ -2088,8 +2104,8 @@ def stockholm_resilience_parser(html_content: str, base_url: str) -> List[Dict[s
             seen_urls.add(report['url'])
             unique_reports.append(report)
 
-    # 限制只返回最新的报告（最多10个），避免抓取过多历史报告
-    MAX_REPORTS_PER_SITE = 10
+    # 限制只返回最新的报告（最多6个），避免抓取过多历史报告
+    MAX_REPORTS_PER_SITE = 6
     if len(unique_reports) > MAX_REPORTS_PER_SITE:
         logger.info(f"Stockholm Resilience: 限制返回报告数量为 {MAX_REPORTS_PER_SITE} 个（共 {len(unique_reports)} 个）")
         unique_reports = unique_reports[:MAX_REPORTS_PER_SITE]
@@ -2234,8 +2250,8 @@ def biodiversity_council_parser(html_content: str, base_url: str) -> List[Dict[s
             seen_urls.add(report['url'])
             unique_reports.append(report)
 
-    # 限制只返回最新的报告（最多10个），避免抓取过多历史报告
-    MAX_REPORTS_PER_SITE = 10
+    # 限制只返回最新的报告（最多6个），避免抓取过多历史报告
+    MAX_REPORTS_PER_SITE = 6
     if len(unique_reports) > MAX_REPORTS_PER_SITE:
         logger.info(f"Biodiversity Council: 限制返回报告数量为 {MAX_REPORTS_PER_SITE} 个（共 {len(unique_reports)} 个）")
         unique_reports = unique_reports[:MAX_REPORTS_PER_SITE]
