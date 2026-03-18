@@ -131,27 +131,35 @@ class DatabaseManager:
         Returns:
             Optional[int]: 插入成功的报告ID，重复或失败时返回None
         """
+        # 首先检查报告是否已存在（URL唯一）
+        if self.report_exists(url):
+            logger.debug(f"报告已存在，跳过: {title}")
+            return None
+            
         insert_sql = """
-        INSERT OR IGNORE INTO reports (title, url, source_website, publish_date, discovered_time, sent_status)
+        INSERT INTO reports (title, url, source_website, publish_date, discovered_time, sent_status)
         VALUES (?, ?, ?, ?, ?, 0)
         """
         
         try:
             cursor = self.connection.cursor()
             
-            # 插入新记录，使用INSERT OR IGNORE避免重复
+            # 插入新记录
             discovered_time = datetime.now().isoformat()
             cursor.execute(insert_sql, (title, url, source_website, publish_date, discovered_time))
             self.connection.commit()
             
-            # 获取插入的ID，如果为0则表示重复或未插入
+            # 获取插入的ID
             report_id = cursor.lastrowid
             if report_id:
                 logger.info(f"成功插入报告: {title}, ID: {report_id}")
-            else:
-                logger.debug(f"报告已存在，跳过: {title}")
-            return report_id if report_id else None
+            return report_id
             
+        except sqlite3.IntegrityError as e:
+            # 处理URL唯一性约束冲突
+            logger.debug(f"报告URL已存在，跳过: {title}, 错误: {e}")
+            self.connection.rollback()
+            return None
         except sqlite3.Error as e:
             logger.error(f"插入报告失败: {e}")
             self.connection.rollback()

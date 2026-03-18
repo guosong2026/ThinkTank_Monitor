@@ -723,124 +723,17 @@ class MonitorService:
 
     def send_unsent_reports(self) -> Dict[str, Any]:
         """
-        发送未发送的报告邮件
+        发送未发送的报告邮件（已禁用此功能，仅发送本次监控发现的新报告）
         
         Returns:
             Dict[str, Any]: 发送结果信息
         """
-        try:
-            # 确保监控器存在（用于获取邮件发送器）
-            if self.monitor is None:
-                self.monitor = self._create_monitor()
-            
-            if self.monitor is None:
-                return {
-                    'success': False,
-                    'error': '无法创建监控器，邮件发送失败'
-                }
-            
-            # 获取最近15分钟内未发送的报告，只发送本次监控中发现的新报告
-            # 排除最近5分钟内发现的报告，避免与正在进行的邮件发送冲突
-            from datetime import datetime, timedelta
-            with DatabaseManager(self.db_path) as db:
-                unsent_reports = db.get_unsent_reports(hours=0.25)  # 15分钟
-                
-            if not unsent_reports:
-                return {
-                    'success': True,
-                    'message': '没有未发送的报告',
-                    'sent_count': 0
-                }
-            
-            # 过滤掉最近5分钟内发现的报告
-            five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
-            filtered_reports = []
-            for report in unsent_reports:
-                try:
-                    discovered_str = report.get('discovered_time')
-                    if discovered_str:
-                        if 'T' in discovered_str:
-                            discovered_time = datetime.fromisoformat(discovered_str.replace('Z', '+00:00'))
-                        else:
-                            discovered_time = datetime.strptime(discovered_str, '%Y-%m-%d %H:%M:%S')
-                        
-                        # 如果报告发现时间在5分钟以前，才包含
-                        if discovered_time < five_minutes_ago:
-                            filtered_reports.append(report)
-                        else:
-                            logger.debug(f"跳过最近发现的报告（避免重复发送）: {report.get('title', 'Unknown')}")
-                    else:
-                        filtered_reports.append(report)
-                except (ValueError, KeyError) as e:
-                    logger.warning(f"解析报告发现时间失败 {report.get('id', 'unknown')}: {e}")
-                    filtered_reports.append(report)  # 无法解析时间，包含以防万一
-            
-            if not filtered_reports:
-                return {
-                    'success': True,
-                    'message': '过滤后没有未发送的报告（可能都是最近5分钟内发现的）',
-                    'sent_count': 0
-                }
-            
-            unsent_reports = filtered_reports
-            
-            sent_count = 0
-            failed_count = 0
-            
-            # 使用监控器的邮件发送器
-            email_sender = self.monitor.email_sender
-            if not email_sender:
-                return {
-                    'success': False,
-                    'error': '邮件发送器未初始化'
-                }
-            
-            for report in unsent_reports:
-                try:
-                    # 构建AI总结数据（从数据库中获取）
-                    ai_summary = None
-                    if report.get('ai_summary') or report.get('ai_chinese_title') or report.get('ai_keywords'):
-                        ai_summary = {
-                            'chinese_title': report.get('ai_chinese_title', ''),
-                            'keywords': report.get('ai_keywords', ''),
-                            'summary': report.get('ai_summary', '')
-                        }
-
-                    success = email_sender.send_report_notification(
-                        title=report['title'],
-                        url=report['url'],
-                        source_website=report['source_website'],
-                        ai_summary=ai_summary
-                    )
-                    
-                    if success:
-                        # 标记报告为已发送
-                        with DatabaseManager(self.db_path) as db:
-                            db.mark_report_as_sent(report['id'])
-                        sent_count += 1
-                        logger.info(f"未发送报告邮件发送成功: {report['title']}")
-                    else:
-                        failed_count += 1
-                        logger.warning(f"未发送报告邮件发送失败: {report['title']}")
-                except Exception as e:
-                    failed_count += 1
-                    logger.error(f"发送未发送报告时出错: {e}")
-            
-            message = f"已发送 {sent_count} 个未发送报告，失败 {failed_count} 个"
-            return {
-                'success': True,
-                'message': message,
-                'sent_count': sent_count,
-                'failed_count': failed_count,
-                'total_count': len(unsent_reports)
-            }
-            
-        except Exception as e:
-            logger.error(f"发送未发送报告失败: {e}")
-            return {
-                'success': False,
-                'error': str(e)
-            }
+        logger.warning("批量发送未发送报告功能已禁用，仅发送本次监控发现的新报告")
+        return {
+            'success': True,
+            'message': '批量发送未发送报告功能已禁用',
+            'sent_count': 0
+        }
 
     def update_settings(self, recipient_emails: List[str] = None, 
                        check_interval_hours: float = None) -> bool:

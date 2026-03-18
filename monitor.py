@@ -394,88 +394,13 @@ class WebsiteMonitor:
     
     def send_unsent_reports(self) -> int:
         """
-        发送数据库中未发送的报告
+        发送数据库中未发送的报告（已禁用此功能，仅发送本次监控发现的新报告）
         
         Returns:
             int: 成功发送的报告数量
         """
-        if not self.enable_email or not self.email_sender:
-            logger.error("邮件通知功能未启用，无法发送未发送的报告")
-            return 0
-        
-        try:
-            from datetime import datetime, timedelta
-            with DatabaseManager(self.db_path) as db:
-                # 获取最近15分钟内未发送的报告，只发送本次监控中发现的新报告
-                # 排除最近5分钟内发现的报告，避免与正在进行的邮件发送冲突
-                unsent_reports = db.get_unsent_reports(hours=0.25)  # 15分钟
-                
-                if not unsent_reports:
-                    logger.info("没有未发送的报告")
-                    return 0
-                
-                # 过滤掉最近5分钟内发现的报告
-                five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
-                filtered_reports = []
-                for report in unsent_reports:
-                    try:
-                        discovered_str = report.get('discovered_time')
-                        if discovered_str:
-                            if 'T' in discovered_str:
-                                discovered_time = datetime.fromisoformat(discovered_str.replace('Z', '+00:00'))
-                            else:
-                                discovered_time = datetime.strptime(discovered_str, '%Y-%m-%d %H:%M:%S')
-                            
-                            # 如果报告发现时间在5分钟以前，才包含
-                            if discovered_time < five_minutes_ago:
-                                filtered_reports.append(report)
-                            else:
-                                logger.debug(f"跳过最近发现的报告（避免重复发送）: {report.get('title', 'Unknown')}")
-                        else:
-                            filtered_reports.append(report)
-                    except (ValueError, KeyError) as e:
-                        logger.warning(f"解析报告发现时间失败 {report.get('id', 'unknown')}: {e}")
-                        filtered_reports.append(report)  # 无法解析时间，包含以防万一
-                
-                if not filtered_reports:
-                    logger.info("过滤后没有未发送的报告（可能都是最近5分钟内发现的）")
-                    return 0
-                
-                logger.info(f"找到 {len(filtered_reports)} 个未发送的报告（已排除最近5分钟内发现的报告），开始发送邮件通知...")
-                unsent_reports = filtered_reports
-                
-                success_count = 0
-                
-                # 发送邮件通知
-                for report in unsent_reports:
-                    title = report['title']
-                    url = report['url']
-                    source_website = report.get('source_website', self.source_website)
-                    report_id = report['id']
-                    
-                    try:
-                        email_success = self.email_sender.send_report_notification(
-                            title=title,
-                            url=url,
-                            source_website=source_website
-                        )
-                        
-                        if email_success:
-                            # 标记报告为已发送
-                            db.mark_report_as_sent(report_id)
-                            success_count += 1
-                            logger.info(f"邮件通知发送成功: {title}")
-                        else:
-                            logger.warning(f"邮件通知发送失败: {title}")
-                    except Exception as e:
-                        logger.error(f"发送邮件通知时出错: {e}")
-                
-                logger.info(f"未发送报告处理完成: 成功 {success_count}/{len(unsent_reports)}")
-                return success_count
-                
-        except Exception as e:
-            logger.error(f"发送未发送报告时出错: {e}")
-            return 0
+        logger.warning("批量发送未发送报告功能已禁用，仅发送本次监控发现的新报告")
+        return 0
 
 
 class MultiWebsiteMonitor:
@@ -951,87 +876,13 @@ class MultiWebsiteMonitor:
     
     def send_unsent_reports(self) -> int:
         """
-        发送数据库中未发送的报告
+        发送数据库中未发送的报告（已禁用此功能，仅发送本次监控发现的新报告）
         
         Returns:
             int: 成功发送的报告数量
         """
-        if not self.enable_email or not self.email_sender:
-            logger.error("邮件通知功能未启用，无法发送未发送的报告")
-            return 0
-        
-        try:
-            from db import DatabaseManager
-            from datetime import datetime, timedelta
-            with DatabaseManager(self.db_path) as db:
-                # 获取最近15分钟内未发送的报告，只发送本次监控中发现的新报告
-                # 排除最近5分钟内发现的报告，避免与正在进行的邮件发送冲突
-                unsent_reports = db.get_unsent_reports(hours=0.25)  # 15分钟
-                
-                if not unsent_reports:
-                    logger.info("没有未发送的报告")
-                    return 0
-                
-                # 过滤掉最近5分钟内发现的报告
-                five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
-                filtered_reports = []
-                for report in unsent_reports:
-                    try:
-                        discovered_str = report.get('discovered_time')
-                        if discovered_str:
-                            if 'T' in discovered_str:
-                                discovered_time = datetime.fromisoformat(discovered_str.replace('Z', '+00:00'))
-                            else:
-                                discovered_time = datetime.strptime(discovered_str, '%Y-%m-%d %H:%M:%S')
-                            
-                            # 如果报告发现时间在5分钟以前，才包含
-                            if discovered_time < five_minutes_ago:
-                                filtered_reports.append(report)
-                            else:
-                                logger.debug(f"跳过最近发现的报告（避免重复发送）: {report.get('title', 'Unknown')}")
-                        else:
-                            filtered_reports.append(report)
-                    except (ValueError, KeyError) as e:
-                        logger.warning(f"解析报告发现时间失败 {report.get('id', 'unknown')}: {e}")
-                        filtered_reports.append(report)  # 无法解析时间，包含以防万一
-                
-                if not filtered_reports:
-                    logger.info("过滤后没有未发送的报告（可能都是最近5分钟内发现的）")
-                    return 0
-                
-                logger.info(f"找到 {len(filtered_reports)} 个未发送的报告（已排除最近5分钟内发现的报告），开始发送邮件通知...")
-                unsent_reports = filtered_reports
-                
-                success_count = 0
-                
-                for report in unsent_reports:
-                    title = report['title']
-                    url = report['url']
-                    source_website = report.get('source_website', '未知')
-                    report_id = report['id']
-                    
-                    try:
-                        email_success = self.email_sender.send_report_notification(
-                            title=title,
-                            url=url,
-                            source_website=source_website
-                        )
-                        
-                        if email_success:
-                            db.mark_report_as_sent(report_id)
-                            success_count += 1
-                            logger.info(f"邮件通知发送成功: {title}")
-                        else:
-                            logger.warning(f"邮件通知发送失败: {title}")
-                    except Exception as e:
-                        logger.error(f"发送邮件通知时出错: {e}")
-                
-                logger.info(f"未发送报告处理完成: 成功 {success_count}/{len(unsent_reports)}")
-                return success_count
-                
-        except Exception as e:
-            logger.error(f"发送未发送报告时出错: {e}")
-            return 0
+        logger.warning("批量发送未发送报告功能已禁用，仅发送本次监控发现的新报告")
+        return 0
 
 
 def main():
