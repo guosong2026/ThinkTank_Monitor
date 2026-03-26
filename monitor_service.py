@@ -10,7 +10,7 @@ import logging
 import os
 import threading
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -19,6 +19,71 @@ from db import DatabaseManager
 from monitor import MultiWebsiteMonitor
 from website_configs import get_all_websites
 from email_sender import EmailSender
+
+
+def format_datetime_utc8(dt: Optional[datetime]) -> Optional[str]:
+    """
+    将时间统一格式化为 UTC+8 时区，格式为 yyyy-mm-dd hh:mm
+    
+    Args:
+        dt: datetime 对象，可能为 None
+        
+    Returns:
+        格式化后的时间字符串，或 None
+    """
+    if dt is None:
+        return None
+    
+    # 确保时间有时区信息，假设输入为 UTC 时间
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    
+    # 转换为 UTC+8 时区
+    utc8 = timezone(timedelta(hours=8))
+    dt_utc8 = dt.astimezone(utc8)
+    
+    # 格式化为 yyyy-mm-dd hh:mm
+    return dt_utc8.strftime("%Y-%m-%d %H:%M")
+
+
+def parse_datetime_to_utc8(dt_str: Optional[str]) -> Optional[str]:
+    """
+    解析时间字符串并转换为 UTC+8 格式
+    
+    Args:
+        dt_str: 时间字符串，支持多种格式
+        
+    Returns:
+        格式化后的时间字符串，或 None
+    """
+    if not dt_str:
+        return None
+    
+    try:
+        # 尝试多种解析方式
+        formats = [
+            "%Y-%m-%dT%H:%M:%S.%f",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%d %H:%M:%S.%f",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d"
+        ]
+        
+        dt = None
+        for fmt in formats:
+            try:
+                dt = datetime.strptime(dt_str, fmt)
+                break
+            except ValueError:
+                continue
+        
+        if dt is None:
+            return dt_str
+        
+        return format_datetime_utc8(dt)
+    
+    except Exception:
+        return dt_str
 
 logger = logging.getLogger(__name__)
 
@@ -464,7 +529,7 @@ class MonitorService:
                 status["scheduler_running"] = self.scheduler.running
                 if self.scheduler.get_job(self.job_id):
                     job = self.scheduler.get_job(self.job_id)
-                    status["next_run_time"] = str(job.next_run_time) if job.next_run_time else None
+                    status["next_run_time"] = format_datetime_utc8(job.next_run_time) if job.next_run_time else None
                 else:
                     status["next_run_time"] = None
             else:
@@ -560,6 +625,11 @@ class MonitorService:
                     
                     sorted_reports = filtered_reports
                 
+                # 格式化报告的发现时间
+                for report in sorted_reports:
+                    if report.get('discovered_time'):
+                        report['discovered_time'] = parse_datetime_to_utc8(report['discovered_time'])
+                
                 return sorted_reports[:limit]
                 
         except Exception as e:
@@ -577,7 +647,16 @@ class MonitorService:
         """
         try:
             with DatabaseManager(self.db_path) as db:
-                return db.get_recent_monitor_runs(limit=limit)
+                runs = db.get_recent_monitor_runs(limit=limit)
+                
+                # 格式化时间显示
+                for run in runs:
+                    if run.get('start_time'):
+                        run['start_time'] = parse_datetime_to_utc8(run['start_time'])
+                    if run.get('end_time'):
+                        run['end_time'] = parse_datetime_to_utc8(run['end_time'])
+                
+                return runs
         except Exception as e:
             logger.error(f"获取监控运行记录失败: {e}")
             return []
