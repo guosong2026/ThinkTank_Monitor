@@ -42,7 +42,7 @@
                     </thead>
                     <tbody id="reports-table-body">
                         {% if reports %}
-                            {% for report in reports[:20] %}
+                            {% for report in reports %}
                             <tr>
                                 <td>
                                     <div class="report-title">{{ report.title }}</div>
@@ -228,6 +228,8 @@
 
     .table-container {
         overflow-x: auto;
+        overflow-y: auto;
+        max-height: 600px;
     }
 
     .table {
@@ -236,6 +238,12 @@
         width: 100%;
         border-collapse: collapse;
         table-layout: fixed;
+    }
+
+    .table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
     }
 
     .table th, .table td {
@@ -249,7 +257,7 @@
     .table th {
         color: var(--color-accent);
         font-weight: 600;
-        background-color: var(--color-surface-hover);
+        background-color: var(--color-surface);
         white-space: nowrap;
     }
 
