@@ -233,7 +233,7 @@ class WebsiteConfig:
             'home', 'about', 'contact', 'privacy', 'terms', 'login',
             'signup', 'subscribe', 'twitter', 'facebook', 'linkedin',
             'instagram', 'youtube', 'rss', 'feed', 'search', 'donate',
-            'careers', 'press', 'media', 'newsletter', 'cookie',
+            'careers', 'media', 'newsletter', 'cookie',
             'next page', 'previous page', 'page', 'next', 'previous',
             'privacy notice', 'privacy policy', 'terms of use',
             'our research culture', 'read more', 'read more »', 'read',
@@ -1879,6 +1879,8 @@ def iucn_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     页面可能有分页和列表容器
     """
     from bs4 import BeautifulSoup
+    import logging
+    logger = logging.getLogger(__name__)
     
     if not html_content:
         return []
@@ -1887,7 +1889,12 @@ def iucn_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     soup = BeautifulSoup(html_content, 'lxml')
     
     # IUCN特定选择器（基于分析）
+    # 针对Drupal结构的选择器
     selectors = [
+        'a[href*="/press-release/"]',
+        '.view-content a',
+        '.views-row a',
+        '.search-result a',
         '.list a',
         '.grid a',
         '.row a',
@@ -1907,35 +1914,67 @@ def iucn_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     for selector in selectors:
         links = soup.select(selector)
         if links:
+            logger.info(f"IUCN: 使用选择器 '{selector}' 找到 {len(links)} 个链接")
             for link in links:
                 title = link.text.strip()
                 href = link.get('href', '')
                 
-                if href and title:
-                    full_url = urljoin(base_url, href)
-                    # 检查是否是新闻稿或出版物链接
-                    if any(pattern in full_url.lower() for pattern in 
-                          ['/press-release/', '/press/', '/news/', '/library/', '/publication/']):
-                        reports.append({
-                            'title': title,
-                            'url': full_url,
-                            'source': 'IUCN'
-                        })
-            break
+                if not href or not title:
+                    continue
+                    
+                # 清理标题
+                title = ' '.join(title.split())
+                
+                # 排除太短的标题和导航链接
+                if len(title) < 10:
+                    continue
+                    
+                exclude_keywords = ['library', 'privacy', 'terms', 'contact', 'about', 'home', 
+                                  'cookie', 'search', 'subscribe', 'donate', 'login',
+                                  'read more', 'learn more', 'also available']
+                if any(kw in title.lower() for kw in exclude_keywords):
+                    continue
+                    
+                full_url = urljoin(base_url, href)
+                href_lower = href.lower()
+                
+                # 检查是否是新闻稿链接
+                # 模式: /press-release/202604/...
+                if ('/press-release/' in href_lower):
+                    reports.append({
+                        'title': title,
+                        'url': full_url,
+                        'source': 'IUCN'
+                    })
+            if reports:  # 找到报告后就停止尝试更多选择器
+                break
     
-    # 如果上述选择器都没找到，查找所有链接
+    # 如果上述选择器都没找到，尝试更通用的方法
     if not reports:
+        logger.info("IUCN: 尝试通用方法查找所有链接")
         all_links = soup.find_all('a', href=True)
         for link in all_links:
-            href = link['href']
+            href = link.get('href', '')
             title = link.text.strip()
             
+            if not href or not title:
+                continue
+                
+            title = ' '.join(title.split())
+            
+            if len(title) < 10:
+                continue
+                
+            exclude_keywords = ['library', 'privacy', 'terms', 'contact', 'about', 'home', 
+                              'cookie', 'search', 'subscribe', 'donate', 'login', 
+                              'read more', 'learn more', 'also available']
+            if any(kw in title.lower() for kw in exclude_keywords):
+                continue
+                
+            href_lower = href.lower()
+            
             # 过滤可能的新闻稿链接
-            if (('/press-release/' in href.lower() or 
-                 '/press/' in href.lower() or 
-                 '/news/' in href.lower() or
-                 '/library/' in href.lower()) and 
-                len(title) > 10):
+            if ('/press-release/' in href_lower):
                 full_url = urljoin(base_url, href)
                 reports.append({
                     'title': title,
@@ -1943,9 +1982,13 @@ def iucn_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
                     'source': 'IUCN'
                 })
     
-    # 清理标题
+    # 清理标题：移除日期前缀等
+    import re
     for report in reports:
         title = report['title']
+        # 移除 "Press release 02 Apr, 2026 " 这种前缀
+        title = re.sub(r'^Press release\s+\d{1,2}\s+\w+,\s+\d{4}\s*', '', title, flags=re.IGNORECASE)
+        title = re.sub(r'^Press release\s+\d{1,2}\s+\w+\s+\d{4}\s*', '', title, flags=re.IGNORECASE)
         title = ' '.join(title.split())
         if len(title) > 10:
             report['title'] = title
@@ -1958,6 +2001,12 @@ def iucn_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
             seen_urls.add(report['url'])
             unique_reports.append(report)
     
+    # 限制只返回最新的报告（最多6个），避免抓取过多历史报告
+    MAX_REPORTS_PER_SITE = 6
+    if len(unique_reports) > MAX_REPORTS_PER_SITE:
+        logger.info(f"IUCN: 限制返回报告数量为 {MAX_REPORTS_PER_SITE} 个（共 {len(unique_reports)} 个）")
+        unique_reports = unique_reports[:MAX_REPORTS_PER_SITE]
+    
     return unique_reports
 
 
@@ -1967,6 +2016,8 @@ def stockholm_resilience_parser(html_content: str, base_url: str) -> List[Dict[s
     页面包含research-stories和research-news
     """
     from bs4 import BeautifulSoup
+    import logging
+    logger = logging.getLogger(__name__)
 
     if not html_content:
         return []
@@ -1985,8 +2036,10 @@ def stockholm_resilience_parser(html_content: str, base_url: str) -> List[Dict[s
         'resilience-dictionary', 'planetary-boundaries'
     ]
 
-    # Stockholm Resilience特定选择器 - 针对research stories/news
+    # Stockholm Resilience特定选择器 - 针对新页面结构
     selectors = [
+        '.src-publication-archive-container a',
+        '.src-publication-archive-wrapper a',
         '.content a',
         'main a',
         '.main-content a',
@@ -2014,7 +2067,7 @@ def stockholm_resilience_parser(html_content: str, base_url: str) -> List[Dict[s
                 title = ' '.join(title.split())
 
                 # 排除标题太短或包含排除关键词的链接
-                if len(title) < 15:
+                if len(title) < 10:
                     continue
 
                 # 排除非内容页面
@@ -2022,25 +2075,18 @@ def stockholm_resilience_parser(html_content: str, base_url: str) -> List[Dict[s
                 if any(kw in href_lower for kw in exclude_keywords):
                     continue
 
-                # 检查是否是研究故事/新闻/出版物链接
-                # 包含 /research-stories/ 或 /research-news/ 或 /publications/
+                # 检查是否是出版物链接
+                # 包含 /publications/publications/ 或 /publications/
                 if any(pattern in href_lower for pattern in
-                      ['/research-stories/', '/research-news/', '/publications/']):
+                      ['/publications/publications/', '/publications/']):
                     # 排除页面类型链接
-                    skip_patterns = ['type=', '?page', '#', 'meet-our-team']
+                    skip_patterns = ['type=', '?page', '#', 'meet-our-team', '?year=']
                     if any(p in href_lower for p in skip_patterns):
                         continue
 
                     # 进一步清理标题
-                    # 移除 "Research story|2026-02-27" 这种前缀
                     import re
-                    title = re.sub(r'^(Research story|General news|Research story)\s*\|\s*\d{4}-\d{2}-\d{2}\s*', '', title)
-
-                    # 移除 "Read more" 等
-                    read_more_patterns = ['read more', 'read more »', 'learn more', 'click here']
-                    for pattern in read_more_patterns:
-                        title = re.sub(pattern, '', title, flags=re.IGNORECASE).strip()
-
+                    
                     # 清理标题中的出版物类型、日期和作者信息
                     # 格式: "Title Journal / article | 2026 Author..." -> "Title"
                     title = re.sub(r'\s*/\s*\w+\s*\|.*$', '', title)
@@ -2048,7 +2094,7 @@ def stockholm_resilience_parser(html_content: str, base_url: str) -> List[Dict[s
                     title = re.sub(r'\s+(Journal|Science|Nature|Paper|Research|Report|Book|Chapter)$', '', title, flags=re.IGNORECASE)
                     title = title.strip()
 
-                    if len(title) >= 15:
+                    if len(title) >= 10:
                         full_url = urljoin(base_url, href)
                         reports.append({
                             'title': title,
@@ -2074,21 +2120,18 @@ def stockholm_resilience_parser(html_content: str, base_url: str) -> List[Dict[s
             if any(kw in href_lower for kw in exclude_keywords):
                 continue
 
-            # 过滤可能的研究故事/新闻链接
+            # 过滤可能的出版物链接
             if (any(pattern in href_lower for pattern in
-                   ['/research-stories/', '/research-news/', '/publications/']) and
-                len(title) >= 15):
+                   ['/publications/publications/', '/publications/']) and
+                len(title) >= 10):
                 # 清理标题
                 import re
-                title = re.sub(r'^(Research story|General news)\s*\|\s*\d{4}-\d{2}-\d{2}\s*', '', title)
-
-                # 清理标题中的出版物类型、日期和作者信息
                 title = re.sub(r'\s*/\s*\w+\s*\|.*$', '', title)
                 title = re.sub(r'\s*\|\s*\d{4}.*$', '', title)
                 title = re.sub(r'\s+(Journal|Science|Nature|Paper|Research|Report|Book|Chapter)$', '', title, flags=re.IGNORECASE)
                 title = title.strip()
 
-                if len(title) >= 15:
+                if len(title) >= 10:
                     full_url = urljoin(base_url, href)
                     reports.append({
                         'title': title,
