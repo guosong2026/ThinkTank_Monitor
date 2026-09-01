@@ -65,3 +65,6 @@ reports.db
 # Test files
 test_*.py
 *_test.py
+
+# Generated knowledge graph data
+data/knowledge_graph_cache.json

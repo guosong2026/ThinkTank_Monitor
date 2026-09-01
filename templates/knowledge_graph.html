@@ -1,0 +1,440 @@
+{% extends "base.html" %}
+
+{% block title %}知识图谱{% endblock %}
+
+{% block extra_css %}
+<style>
+    #graph-container {
+        width: 100%;
+        height: 70vh;
+        min-height: 500px;
+        background: #16213e;
+        border-radius: 12px;
+        position: relative;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+    }
+    .legend-dot {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+    }
+    .legend-rect {
+        width: 16px;
+        height: 16px;
+        border-radius: 2px;
+    }
+    .legend-line {
+        width: 30px;
+        height: 3px;
+        border-radius: 2px;
+    }
+    .legend-line-dashed {
+        width: 30px;
+        height: 3px;
+        border-radius: 2px;
+        border-top: 2px dashed;
+    }
+    .sidebar {
+        position: fixed;
+        right: -400px;
+        top: 0;
+        width: 400px;
+        height: 100%;
+        background: #1e293b;
+        border-left: 1px solid rgba(255,255,255,0.1);
+        transition: right 0.3s ease;
+        z-index: 1050;
+        overflow-y: auto;
+        padding: 1.5rem;
+    }
+    .sidebar.open { right: 0; }
+    .sidebar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .report-item {
+        background: rgba(255,255,255,0.05);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    .report-title {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    .report-date {
+        color: #94a3b8;
+        font-size: 0.8rem;
+    }
+    .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1040;
+        display: none;
+    }
+    .overlay.show { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <h2 class="mb-3">知识图谱</h2>
+        <p class="text-muted">探索最近30天智库报告中的知识关联</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-3 mb-4">
+        <div class="card bg-dark mb-3">
+            <div class="card-body">
+                <h6 class="card-title">控制面板</h6>
+                <div class="mb-3">
+                    <label class="form-label small">每篇报告关键词数</label>
+                    <input type="number" class="form-control form-control-sm" id="topK" value="10" min="5" max="20">
+                    <small class="text-muted">范围：5-20</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">全局关键词数量</label>
+                    <input type="number" class="form-control form-control-sm" id="globalTopN" value="50" min="20" max="100">
+                    <small class="text-muted">范围：20-100</small>
+                </div>
+                <button class="btn btn-primary btn-sm w-100" id="refreshBtn">刷新图谱</button>
+            </div>
+        </div>
+
+        <div class="card bg-dark mb-3">
+            <div class="card-body">
+                <h6 class="card-title">图例</h6>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background:#e74c3c;"></div>
+                    <span>高频关键词</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background:#3498db;"></div>
+                    <span>中频关键词</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background:#2ecc71;"></div>
+                    <span>低频关键词</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-rect" style="background:#666;"></div>
+                    <span>报告</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background:#ff6b6b;"></div>
+                    <span>关键词共现</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background:#ff0000; width: 8px;"></div>
+                    <span>高频关键词共现</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line-dashed" style="border-color:#4ecdc4;"></div>
+                    <span>关键词-报告</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card bg-dark">
+            <div class="card-body">
+                <h6 class="card-title">操作说明</h6>
+                <ul class="list-unstyled small text-muted mb-0">
+                    <li class="mb-1">• 鼠标拖拽移动节点</li>
+                    <li class="mb-1">• 滚轮缩放视图</li>
+                    <li class="mb-1">• 点击关键词查看相关报告</li>
+                    <li>• 点击报告跳转到原文</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-9">
+        <div id="graph-container"></div>
+    </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <h5 id="sidebarTitle" style="margin:0">相关报告</h5>
+        <button class="btn btn-outline-light btn-sm" id="closeSidebar">关闭</button>
+    </div>
+    <div class="sidebar-content" id="sidebarContent"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+<script>
+    var cy = null;
+    var graphData = null;
+
+    function log(msg) {
+        console.log('[KG]', msg);
+    }
+
+    function initCytoscape() {
+        log('初始化Cytoscape...');
+
+        cy = cytoscape({
+            container: document.getElementById('graph-container'),
+            style: [
+                {
+                    selector: 'node.keyword',
+                    style: {
+                        'label': 'data(label)',
+                        'background-color': 'data(color)',
+                        'width': 'data(size)',
+                        'height': 'data(size)',
+                        'font-size': 12,
+                        'color': '#fff',
+                        'text-valign': 'bottom',
+                        'text-margin-y': 5,
+                        'border-width': 2,
+                        'border-color': '#fff'
+                    }
+                },
+                {
+                    selector: 'node.report',
+                    style: {
+                        'background-color': '#888',
+                        'width': 15,
+                        'height': 15,
+                        'shape': 'rectangle',
+                        'font-size': 9,
+                        'color': '#ccc',
+                        'border-width': 1,
+                        'border-color': '#555'
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'curve-style': 'haystack',
+                        'haystack-radius': 0,
+                        'line-color': '#ff6b6b',
+                        'width': 4,
+                        'opacity': 0.9,
+                        'target-arrow-shape': 'none'
+                    }
+                },
+                {
+                    selector: 'edge.cooccurrence',
+                    style: {
+                        'line-color': '#ff6b6b',
+                        'width': 4,
+                        'opacity': 0.9
+                    }
+                },
+                {
+                    selector: 'edge.cooccurrence-high',
+                    style: {
+                        'line-color': '#ff0000',
+                        'width': 8,
+                        'opacity': 0.9
+                    }
+                },
+                {
+                    selector: 'edge.contains',
+                    style: {
+                        'line-color': '#4ecdc4',
+                        'width': 3,
+                        'opacity': 0.7,
+                        'line-style': 'dashed'
+                    }
+                }
+            ],
+            layout: { name: 'preset' },
+            userZoomingEnabled: true,
+            userPanningEnabled: true,
+            boxSelectionEnabled: false
+        });
+
+        log('Cytoscape就绪');
+    }
+
+    function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+    }
+
+    async function loadGraphData() {
+        var topK = clamp(parseInt(document.getElementById('topK').value) || 10, 5, 20);
+        var globalTopN = clamp(parseInt(document.getElementById('globalTopN').value) || 50, 20, 100);
+        
+        document.getElementById('topK').value = topK;
+        document.getElementById('globalTopN').value = globalTopN;
+
+        log('开始加载...');
+
+        try {
+            var response = await fetch('/api/knowledge-graph?top_k=' + topK + '&global_top_n=' + globalTopN);
+            var result = await response.json();
+
+            if (result.success) {
+                log('收到数据 - 节点: ' + result.data.nodes.length + ', 边: ' + result.data.edges.length);
+                graphData = result.data;
+                renderGraph(graphData);
+            } else {
+                log('API错误: ' + result.error);
+            }
+        } catch (error) {
+            log('错误: ' + error.message);
+        }
+    }
+
+    function renderGraph(data) {
+        log('开始渲染...');
+
+        cy.elements().remove();
+
+        var elements = [];
+
+        data.nodes.forEach(function(node, idx) {
+            var nodeClass = node.type === 'keyword' ? 'keyword' : 'report';
+            elements.push({
+                data: {
+                    id: 'n' + idx,
+                    label: node.label,
+                    color: node.color,
+                    size: node.size || 20,
+                    nodetype: node.type,
+                    url: node.url
+                },
+                classes: nodeClass,
+                position: {
+                    x: 200 + (idx % 10) * 100,
+                    y: 200 + Math.floor(idx / 10) * 100
+                }
+            });
+        });
+
+        var nodeIdMap = {};
+        data.nodes.forEach(function(node, idx) {
+            nodeIdMap[node.id] = 'n' + idx;
+        });
+
+        data.edges.forEach(function(edge, idx) {
+            var sourceId = nodeIdMap[edge.source];
+            var targetId = nodeIdMap[edge.target];
+
+            if (sourceId && targetId) {
+                var edgeClass = edge.type;
+                if (edge.type === 'cooccurrence' && edge.is_high_cooccur) {
+                    edgeClass = 'cooccurrence cooccurrence-high';
+                }
+                elements.push({
+                    data: {
+                        id: 'e' + idx,
+                        source: sourceId,
+                        target: targetId,
+                        edgetype: edge.type
+                    },
+                    classes: edgeClass
+                });
+            }
+        });
+
+        log('添加 ' + elements.length + ' 个元素');
+
+        cy.add(elements);
+        log('实际 - 节点: ' + cy.nodes().length + ', 边: ' + cy.edges().length);
+
+        var layout = cy.layout({
+            name: 'cose',
+            animate: true,
+            animationDuration: 3000,
+            nodeDimensionsIncludeLabels: false,
+            refresh: 30,
+            fit: true,
+            padding: 50,
+            randomize: true,
+            componentSpacing: 120,
+            nodeRepulsion: 800000,
+            nodeOverlap: 20,
+            idealEdgeLength: 120,
+            edgeElasticity: 120,
+            gravity: 80,
+            numIter: 2500,
+            initialTemp: 200,
+            coolingFactor: 0.95,
+            minTemp: 1.0
+        });
+
+        layout.run();
+
+        layout.on('layoutstop', function() {
+            log('布局完成!');
+        });
+
+        cy.on('tap', 'node.keyword', function(evt) {
+            var keyword = evt.target.data('label');
+            showRelatedReports(keyword);
+        });
+
+        cy.on('tap', 'node.report', function(evt) {
+            var url = evt.target.data('url');
+            if (url) window.open(url, '_blank');
+        });
+    }
+
+    function showRelatedReports(keyword) {
+        var reports = graphData.keyword_reports[keyword] || [];
+        document.getElementById('sidebarTitle').textContent = '关键词: ' + keyword;
+
+        var html = '';
+        if (reports.length === 0) {
+            html = '<p class="text-muted">暂无相关报告</p>';
+        } else {
+            reports.forEach(function(report) {
+                html += '<div class="report-item">';
+                html += '<div class="report-title">' + report.title + '</div>';
+                html += '<div class="report-date">' + report.date + '</div>';
+                if (report.url) {
+                    html += '<a href="' + report.url + '" target="_blank" class="btn btn-sm btn-outline-light mt-2">查看原文</a>';
+                }
+                html += '</div>';
+            });
+        }
+
+        document.getElementById('sidebarContent').innerHTML = html;
+        document.getElementById('sidebar').classList.add('open');
+        document.getElementById('overlay').classList.add('show');
+    }
+
+    function closeSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('overlay').classList.remove('show');
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', loadGraphData);
+    document.getElementById('closeSidebar').addEventListener('click', closeSidebar);
+    document.getElementById('overlay').addEventListener('click', closeSidebar);
+
+    window.addEventListener('load', function() {
+        document.body.classList.remove('modal-open');
+        var backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(function(b) { b.remove(); });
+        log('页面加载');
+        initCytoscape();
+        setTimeout(loadGraphData, 500);
+    });
+</script>
+{% endblock %}

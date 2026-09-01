@@ -5,6 +5,8 @@ Flask Web界面主程序
 
 import json
 import logging
+import os
+from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 
 # 可选依赖：CORS支持
@@ -18,6 +20,7 @@ except ImportError:
 
 from monitor_service import get_monitor_service
 from db import DatabaseManager
+from knowledge_graph import KnowledgeGraphBuilder, create_sample_data
 
 # 配置日志
 logging.basicConfig(
@@ -37,6 +40,63 @@ else:
 
 # 获取监控服务实例
 monitor_service = get_monitor_service()
+
+# 知识图谱缓存配置
+KG_CACHE_FILE = './data/knowledge_graph_cache.json'
+KG_CACHE_DURATION_HOURS = 168  # 168小时 = 1周
+os.makedirs(os.path.dirname(KG_CACHE_FILE), exist_ok=True)
+
+
+def is_cache_valid() -> bool:
+    """检查知识图谱缓存是否有效"""
+    if not os.path.exists(KG_CACHE_FILE):
+        return False
+    try:
+        file_mtime = datetime.fromtimestamp(os.path.getmtime(KG_CACHE_FILE))
+        return datetime.now() - file_mtime < timedelta(hours=KG_CACHE_DURATION_HOURS)
+    except Exception as e:
+        logger.warning(f"检查缓存文件失败: {e}")
+        return False
+
+
+def load_cache():
+    """从文件加载缓存的知识图谱"""
+    try:
+        with open(KG_CACHE_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning(f"加载缓存失败: {e}")
+        return None
+
+
+def save_cache(data):
+    """保存知识图谱到缓存文件"""
+    try:
+        with open(KG_CACHE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False)
+        logger.info("知识图谱缓存已更新")
+    except Exception as e:
+        logger.error(f"保存缓存失败: {e}")
+
+
+def build_and_cache_kg(top_k: int = 10, global_top_n: int = 50):
+    """构建知识图谱并缓存"""
+    try:
+        builder = KnowledgeGraphBuilder()
+        builder.load_reports(use_db=True, days=30)
+        
+        if not builder.reports:
+            logger.info("数据库中没有报告数据，创建示例数据")
+            create_sample_data()
+            builder.load_reports(use_db=False)
+        
+        builder.process_reports(top_k_keywords=top_k, global_top_n=global_top_n)
+        graph_data = builder.build_graph_data()
+        save_cache(graph_data)
+        return graph_data
+    except Exception as e:
+        logger.error(f"构建知识图谱失败: {e}")
+        return None
 
 
 @app.route('/')
@@ -542,6 +602,73 @@ def trigger_check():
         return jsonify({
             "status": "error",
             "error": str(e)
+        }), 500
+
+
+@app.route('/knowledge-graph', methods=['GET'])
+def knowledge_graph_page():
+    """知识图谱页面"""
+    try:
+        return render_template('knowledge_graph.html')
+    except Exception as e:
+        logger.error(f"知识图谱页面加载失败: {e}")
+        return render_template('error.html', error=str(e)), 500
+
+
+@app.route('/api/knowledge-graph', methods=['GET'])
+def api_knowledge_graph():
+    """获取知识图谱数据API - 使用缓存机制"""
+    try:
+        top_k = request.args.get('top_k', 10, type=int)
+        global_top_n = request.args.get('global_top_n', 50, type=int)
+        
+        cache_top_k = 10
+        cache_global_top_n = 50
+        
+        if top_k == cache_top_k and global_top_n == cache_global_top_n and is_cache_valid():
+            cached_data = load_cache()
+            if cached_data:
+                logger.info("使用缓存的知识图谱数据")
+                return jsonify({
+                    'success': True,
+                    'data': cached_data
+                })
+        
+        graph_data = build_and_cache_kg(top_k=top_k, global_top_n=global_top_n)
+        if graph_data:
+            return jsonify({
+                'success': True,
+                'data': graph_data
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': '无法构建知识图谱'
+            }), 500
+    except Exception as e:
+        logger.error(f"获取知识图谱数据失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/create-sample-data', methods=['POST'])
+def api_create_sample_data():
+    """创建示例数据API"""
+    try:
+        num_reports = request.args.get('num_reports', 20, type=int)
+        reports = create_sample_data(num_reports=num_reports)
+        return jsonify({
+            'success': True,
+            'message': f'成功创建 {len(reports)} 篇示例报告',
+            'count': len(reports)
+        })
+    except Exception as e:
+        logger.error(f"创建示例数据失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
         }), 500
 
 
