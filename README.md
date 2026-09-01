@@ -4,7 +4,7 @@
 
 ## 功能特点
 
-- **定时监控**：每小时自动检查目标网站（可配置间隔）
+- **定时监控**：默认每6小时自动检查目标网站（可配置间隔，手动检查不受限制）
 - **智能抓取**：自动解析网页中的报告标题和链接
 - **数据存储**：将发现的报告保存到SQLite数据库
 - **重复检测**：自动跳过已存在的报告
@@ -30,7 +30,7 @@ python monitor.py
 默认配置：
 - 目标网站：`https://concito.dk/en/analyser`
 - 数据库文件：`reports.db`
-- 检查间隔：1小时
+- 检查间隔：6小时
 
 ### 单次检查模式
 
@@ -59,15 +59,31 @@ python monitor.py --url https://example.com/reports
 # 自定义数据库文件
 python monitor.py --db custom.db
 
-# 自定义检查间隔（2小时）
-python monitor.py --interval 2
+# 自定义检查间隔（6小时）
+python monitor.py --interval 6
 
 # 限制运行次数（运行3次后停止）
 python monitor.py --runs 3
 
 # 组合使用
-python monitor.py --url https://example.com --db example.db --interval 2 --runs 5
+python monitor.py --url https://example.com --db example.db --interval 6 --runs 5
 ```
+
+## 火山方舟AI总结配置
+
+AI总结支持在 Web 的“设置”页面直接填写火山方舟配置。需要提供：
+
+- API Key
+- 模型ID或推理接入点ID
+- Base URL（默认 `https://ark.cn-beijing.volces.com/api/v3`）
+
+保存后会在下一次发现新报告时生效；“测试连接”只发送一个最小验证请求。读取配置时API Key只返回脱敏值，不会在接口响应或日志中明文展示。也可以继续使用 `ARK_API_KEY`、`ARK_ENDPOINT`、`ARK_BASE_URL` 环境变量作为兜底配置。
+
+配置接口：
+
+- `GET /api/ai-config`：读取脱敏配置
+- `POST /api/ai-config`：保存配置（API Key留空时保留原密钥）
+- `POST /api/ai-config/test`：测试已保存或请求体中的配置
 
 ## 邮件配置
 
@@ -152,7 +168,7 @@ python monitor.py --smtp-server smtp.office365.com --smtp-port 587 \
 python monitor.py --send-unsent
 
 # 组合使用
-python monitor.py --url https://concito.dk/en/analyser --interval 2 \
+python monitor.py --url https://concito.dk/en/analyser --interval 6 \
                   --sender-email your_email@outlook.com \
                   --sender-password your_smtp_password \
                   --recipient-emails guosong2023@outlook.com
@@ -353,8 +369,8 @@ ThinkTank_Monitor/
 # 监控所有默认网站
 python monitor.py --multi
 
-# 监控所有默认网站，每2小时检查一次
-python monitor.py --multi --interval 2
+# 监控所有默认网站，每6小时检查一次
+python monitor.py --multi --interval 6
 
 # 监控所有默认网站，禁用邮件通知
 python monitor.py --multi --no-email

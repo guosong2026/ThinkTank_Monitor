@@ -465,11 +465,16 @@ class DatabaseManager:
         - monitor_enabled: 监控是否启用 (1/0)
         - recipient_emails: 收件人邮箱 (JSON列表)
         - check_interval_hours: 检查间隔 (小时)
+        - ark_*: 火山方舟AI总结配置
         """
         default_settings = {
             "monitor_enabled": "0",  # 默认禁用
             "recipient_emails": "[]",  # 空列表
-            "check_interval_hours": "2",  # 默认2小时
+            "check_interval_hours": "6",  # 默认6小时
+            "ark_api_key": "",
+            "ark_endpoint": "",
+            # 留空才能让部署环境中的ARK_BASE_URL作为兜底生效。
+            "ark_base_url": "",
         }
         
         try:
@@ -485,6 +490,24 @@ class DatabaseManager:
                         (key, default_value)
                     )
                     logger.info(f"初始化默认设置: {key} = {default_value}")
+
+            # 一次性把旧版本的2小时默认值迁移为6小时；用户之后仍可在界面修改。
+            cursor.execute(
+                "SELECT value FROM settings WHERE key = ?",
+                ("check_interval_migrated_to_6",)
+            )
+            if not cursor.fetchone():
+                cursor.execute(
+                    "UPDATE settings SET value = ?, updated_time = CURRENT_TIMESTAMP "
+                    "WHERE key = ? AND value = ?",
+                    ("6", "check_interval_hours", "2")
+                )
+                cursor.execute(
+                    "INSERT INTO settings (key, value) VALUES (?, ?)",
+                    ("check_interval_migrated_to_6", "1")
+                )
+                if cursor.rowcount:
+                    logger.info("已完成自动检查间隔的6小时默认值迁移")
             
             self.connection.commit()
             
@@ -538,7 +561,9 @@ class DatabaseManager:
             )
             
             self.connection.commit()
-            logger.info(f"设置更新: {key} = {value}")
+            sensitive_key = any(token in key.lower() for token in ('api_key', 'password', 'secret', 'token'))
+            display_value = '***已脱敏***' if sensitive_key and value else value
+            logger.info(f"设置更新: {key} = {display_value}")
             return True
             
         except sqlite3.Error as e:

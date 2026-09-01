@@ -71,6 +71,40 @@
         </div>
     </div>
 
+    <!-- 火山方舟AI配置 -->
+    <div class="bento-card bento-ai">
+        <div class="bento-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2a7 7 0 0 0-4 12.74V19l4 2 4-2v-4.26A7 7 0 0 0 12 2z"></path>
+                <path d="M9 10h.01M15 10h.01M9.5 13.5h5"></path>
+            </svg>
+            <span>火山方舟 AI 总结</span>
+        </div>
+        <div class="bento-body">
+            <form id="ai-config-form">
+                <div class="form-group">
+                    <label class="form-label" for="ark-api-key">API Key</label>
+                    <input type="password" id="ark-api-key" class="form-control" autocomplete="new-password" placeholder="填写新的 API Key">
+                    <small class="text-muted" id="ark-key-status">留空将保留已保存的密钥</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="ark-endpoint">模型 ID / 推理接入点</label>
+                    <input type="text" id="ark-endpoint" class="form-control" placeholder="例如 doubao-seed-2-0-lite-260215" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="ark-base-url">Base URL</label>
+                    <input type="url" id="ark-base-url" class="form-control" value="https://ark.cn-beijing.volces.com/api/v3" required>
+                    <small class="text-muted">仅允许火山引擎官方 HTTPS 地址，密钥不会在读取接口中返回</small>
+                </div>
+                <div class="form-actions ai-actions">
+                    <button type="submit" id="save-ai-btn" class="btn btn-primary">保存 AI 配置</button>
+                    <button type="button" id="test-ai-btn" class="btn btn-outline">测试连接</button>
+                </div>
+                <small class="text-muted" id="ai-config-status">正在读取配置...</small>
+            </form>
+        </div>
+    </div>
+
     <!-- 状态信息 -->
     <div class="bento-card bento-status">
         <div class="bento-header">
@@ -191,6 +225,12 @@
         margin-top: 1.5rem;
     }
 
+    .ai-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
     .smtp-info {
         display: flex;
         flex-direction: column;
@@ -299,6 +339,21 @@
             }
         });
 
+        fetch('/api/ai-config').then(r => r.json()).then(data => {
+            if (!data.success) return;
+            const config = data.config;
+            document.getElementById('ark-endpoint').value = config.endpoint || '';
+            document.getElementById('ark-base-url').value = config.base_url || 'https://ark.cn-beijing.volces.com/api/v3';
+            document.getElementById('ark-key-status').textContent = config.has_api_key
+                ? `已保存密钥 ${config.api_key_masked}；留空可保留`
+                : '尚未保存密钥';
+            document.getElementById('ai-config-status').textContent = config.configured
+                ? '状态：已配置，下一次发现新报告时会自动总结'
+                : '状态：未完成配置';
+        }).catch(() => {
+            document.getElementById('ai-config-status').textContent = 'AI 配置读取失败';
+        });
+
         document.getElementById('settings-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -343,6 +398,51 @@
                 } else {
                     showToast(r.error || '发送失败', 'error');
                 }
+            });
+        });
+
+        function getAIFormData() {
+            return {
+                api_key: document.getElementById('ark-api-key').value.trim(),
+                endpoint: document.getElementById('ark-endpoint').value.trim(),
+                base_url: document.getElementById('ark-base-url').value.trim()
+            };
+        }
+
+        document.getElementById('ai-config-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('save-ai-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span>保存中...';
+            postJSON('/api/ai-config', getAIFormData()).then(r => {
+                btn.disabled = false;
+                btn.textContent = '保存 AI 配置';
+                if (r.success) {
+                    document.getElementById('ark-api-key').value = '';
+                    document.getElementById('ark-key-status').textContent = `已保存密钥 ${r.config.api_key_masked}；留空可保留`;
+                    document.getElementById('ai-config-status').textContent = '状态：已配置，下一次发现新报告时会自动总结';
+                    showToast(r.message, 'success');
+                } else {
+                    showToast(r.error || 'AI 配置保存失败', 'error');
+                }
+            }).catch(() => {
+                btn.disabled = false;
+                btn.textContent = '保存 AI 配置';
+                showToast('AI 配置保存失败', 'error');
+            });
+        });
+
+        document.getElementById('test-ai-btn').addEventListener('click', function() {
+            this.disabled = true;
+            this.innerHTML = '<span class="loading"></span>测试中...';
+            postJSON('/api/ai-config/test', getAIFormData()).then(r => {
+                this.disabled = false;
+                this.textContent = '测试连接';
+                showToast(r.success ? r.message : (r.error || '连接测试失败'), r.success ? 'success' : 'error');
+            }).catch(() => {
+                this.disabled = false;
+                this.textContent = '测试连接';
+                showToast('连接测试失败', 'error');
             });
         });
     });

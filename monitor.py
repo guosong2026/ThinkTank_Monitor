@@ -31,11 +31,12 @@ class WebsiteMonitor:
     """网站监控器类"""
     
     def __init__(self, target_url: str, db_path: str = "reports.db", 
-                 check_interval_hours: int = 2,
+                 check_interval_hours: int = 6,
                  enable_email: bool = True,
                  smtp_server: str = None, smtp_port: int = None,
                  sender_email: str = None, sender_password: str = None,
-                 recipient_emails: List[str] = None):
+                 recipient_emails: List[str] = None,
+                 ai_summarizer: AISummarizer = None):
         """
         初始化网站监控器
         
@@ -49,6 +50,7 @@ class WebsiteMonitor:
             sender_email: 发件人邮箱
             sender_password: 发件人密码/授权码
             recipient_emails: 收件人邮箱列表
+            ai_summarizer: 已配置的AI总结器；未提供时读取环境变量
         """
         self.target_url = target_url
         self.db_path = db_path
@@ -76,11 +78,11 @@ class WebsiteMonitor:
                 self.enable_email = False
 
         # 初始化AI总结器
-        self.ai_summarizer = AISummarizer()
+        self.ai_summarizer = ai_summarizer or AISummarizer()
         if self.ai_summarizer.is_configured():
             logger.info("AI总结器初始化成功")
         else:
-            logger.info("AI总结器未配置（ARK_API_KEY未设置），将跳过AI总结")
+            logger.info("AI总结器未配置（API Key或模型ID未设置），将跳过AI总结")
         
         logger.info(f"初始化网站监控器")
         logger.info(f"目标URL: {target_url}")
@@ -407,11 +409,12 @@ class MultiWebsiteMonitor:
     """多网站监控器类"""
     
     def __init__(self, website_configs: List[WebsiteConfig], db_path: str = "reports.db",
-                 check_interval_hours: int = 2,
+                 check_interval_hours: int = 6,
                  enable_email: bool = True,
                  smtp_server: str = None, smtp_port: int = None,
                  sender_email: str = None, sender_password: str = None,
-                 recipient_emails: List[str] = None):
+                 recipient_emails: List[str] = None,
+                 ai_summarizer: AISummarizer = None):
         """
         初始化多网站监控器
         
@@ -425,6 +428,7 @@ class MultiWebsiteMonitor:
             sender_email: 发件人邮箱
             sender_password: 发件人密码/授权码
             recipient_emails: 收件人邮箱列表
+            ai_summarizer: 已配置的AI总结器；未提供时读取环境变量
         """
         self.website_configs = website_configs
         self.db_path = db_path
@@ -465,11 +469,11 @@ class MultiWebsiteMonitor:
                 self.enable_email = False
 
         # 初始化AI总结器
-        self.ai_summarizer = AISummarizer()
+        self.ai_summarizer = ai_summarizer or AISummarizer()
         if self.ai_summarizer.is_configured():
             logger.info("AI总结器初始化成功")
         else:
-            logger.info("AI总结器未配置（ARK_API_KEY未设置），将跳过AI总结")
+            logger.info("AI总结器未配置（API Key或模型ID未设置），将跳过AI总结")
 
         logger.info(f"初始化多网站监控器")
         logger.info(f"监控网站数量: {len(website_configs)}")
@@ -894,8 +898,8 @@ def main():
                        help='要监控的网站URL (默认: https://concito.dk/en/analyser)')
     parser.add_argument('--db', default='reports.db',
                        help='SQLite数据库文件路径 (默认: reports.db)')
-    parser.add_argument('--interval', type=int, default=2,
-                       help='检查间隔（小时） (默认: 2)')
+    parser.add_argument('--interval', type=int, default=6,
+                       help='检查间隔（小时） (默认: 6)')
     parser.add_argument('--runs', type=int, default=None,
                        help='最大运行次数（默认: 无限运行）')
     parser.add_argument('--once', action='store_true',

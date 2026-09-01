@@ -231,7 +231,7 @@ def api_get_settings():
         # 提取设置相关字段
         settings = {
             'recipient_emails': status.get('recipient_emails', []),
-            'check_interval_hours': status.get('check_interval_hours', 2)
+            'check_interval_hours': status.get('check_interval_hours', 6)
         }
         
         return jsonify({
@@ -284,6 +284,60 @@ def api_update_settings():
             'success': False,
             'error': str(e)
         }), 500
+
+
+@app.route('/api/ai-config', methods=['GET'])
+def api_get_ai_config():
+    """获取脱敏后的火山方舟配置。"""
+    try:
+        return jsonify({
+            'success': True,
+            'config': monitor_service.get_ai_config()
+        })
+    except Exception as e:
+        logger.error(f"获取AI配置失败: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/ai-config', methods=['POST'])
+def api_update_ai_config():
+    """保存火山方舟API Key、模型/接入点和Base URL。"""
+    try:
+        data = request.get_json(silent=True) or {}
+        monitor_service.update_ai_config(
+            api_key=data.get('api_key'),
+            endpoint=data.get('endpoint'),
+            base_url=data.get('base_url'),
+            clear_api_key=bool(data.get('clear_api_key', False))
+        )
+        return jsonify({
+            'success': True,
+            'message': 'AI配置保存成功，将从下一次检查开始生效',
+            'config': monitor_service.get_ai_config()
+        })
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"保存AI配置失败: {e}")
+        return jsonify({'success': False, 'error': '保存AI配置失败'}), 500
+
+
+@app.route('/api/ai-config/test', methods=['POST'])
+def api_test_ai_config():
+    """测试已保存或请求体中提供的火山方舟配置。"""
+    try:
+        data = request.get_json(silent=True) or {}
+        result = monitor_service.test_ai_config(
+            api_key=data.get('api_key'),
+            endpoint=data.get('endpoint'),
+            base_url=data.get('base_url')
+        )
+        return jsonify(result), 200 if result.get('success') else 400
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"测试AI配置失败: {e}")
+        return jsonify({'success': False, 'error': '测试AI配置失败'}), 500
 
 
 @app.route('/reports', methods=['GET'])

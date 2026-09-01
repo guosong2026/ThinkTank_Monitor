@@ -19,6 +19,8 @@ from db import DatabaseManager
 from monitor import MultiWebsiteMonitor
 from website_configs import get_all_websites
 from email_sender import EmailSender
+from ai_summarizer import AISummarizer
+from urllib.parse import urlparse
 
 
 def format_datetime_utc8(dt: Optional[datetime]) -> Optional[str]:
@@ -158,14 +160,33 @@ class MonitorService:
             parsed_settings["recipient_emails"] = []
         
         # 检查间隔
-        check_interval_str = settings.get("check_interval_hours", "2")
+        check_interval_str = settings.get("check_interval_hours", "6")
         try:
             parsed_settings["check_interval_hours"] = float(check_interval_str)
         except ValueError:
-            logger.warning(f"无效的检查间隔: {check_interval_str}，使用默认值2小时")
-            parsed_settings["check_interval_hours"] = 2.0
+            logger.warning(f"无效的检查间隔: {check_interval_str}，使用默认值6小时")
+            parsed_settings["check_interval_hours"] = 6.0
+
+        # AI配置优先读取Web界面保存值，未保存时回退到部署环境变量。
+        parsed_settings["ark_api_key"] = (
+            settings.get("ark_api_key", "").strip() or os.environ.get("ARK_API_KEY", "").strip()
+        )
+        parsed_settings["ark_endpoint"] = (
+            settings.get("ark_endpoint", "").strip() or os.environ.get("ARK_ENDPOINT", "").strip()
+        )
+        parsed_settings["ark_base_url"] = (
+            settings.get("ark_base_url", "").strip()
+            or os.environ.get("ARK_BASE_URL", AISummarizer.DEFAULT_BASE_URL).strip()
+        ).rstrip('/')
         
-        logger.debug(f"加载设置: {parsed_settings}")
+        # 禁止把API密钥写入日志。
+        logger.debug(
+            "加载设置: monitor_enabled=%s, check_interval_hours=%s, recipients=%s, ai_configured=%s",
+            parsed_settings["monitor_enabled"],
+            parsed_settings["check_interval_hours"],
+            len(parsed_settings["recipient_emails"]),
+            bool(parsed_settings["ark_api_key"] and parsed_settings["ark_endpoint"])
+        )
         return parsed_settings
     
     def _create_monitor(self) -> Optional[MultiWebsiteMonitor]:
@@ -193,18 +214,25 @@ class MonitorService:
             
             # 获取所有网站配置
             website_configs = get_all_websites()
+
+            ai_summarizer = AISummarizer(
+                api_key=settings.get("ark_api_key", ""),
+                endpoint=settings.get("ark_endpoint", ""),
+                base_url=settings.get("ark_base_url", AISummarizer.DEFAULT_BASE_URL)
+            )
             
             # 创建监控器
             monitor = MultiWebsiteMonitor(
                 website_configs=website_configs,
                 db_path=self.db_path,
-                check_interval_hours=settings.get("check_interval_hours", 2),
+                check_interval_hours=settings.get("check_interval_hours", 6),
                 enable_email=enable_email,
                 smtp_server=smtp_server,
                 smtp_port=smtp_port,
                 sender_email=sender_email,
                 sender_password=sender_password,
-                recipient_emails=recipient_emails
+                recipient_emails=recipient_emails,
+                ai_summarizer=ai_summarizer
             )
             
             logger.info("监控器创建成功")
@@ -411,6 +439,79 @@ class MonitorService:
                 'success': False,
                 'error': str(e)
             }
+
+    @staticmethod
+    def _validate_ark_base_url(base_url: str) -> str:
+        """只允许HTTPS火山引擎域名，防止API密钥被发送到第三方地址。"""
+        normalized = (base_url or AISummarizer.DEFAULT_BASE_URL).strip().rstrip('/')
+        parsed = urlparse(normalized)
+        hostname = (parsed.hostname or '').lower()
+        allowed_host = (
+            hostname == 'volces.com' or hostname.endswith('.volces.com')
+            or hostname == 'volcengineapi.com' or hostname.endswith('.volcengineapi.com')
+        )
+        if parsed.scheme != 'https' or not allowed_host or parsed.username or parsed.password:
+            raise ValueError('Base URL必须是火山引擎官方HTTPS地址')
+        return normalized
+
+    def get_ai_config(self) -> Dict[str, Any]:
+        """返回可展示的AI配置，API密钥始终脱敏。"""
+        settings = self._load_settings()
+        api_key = settings.get('ark_api_key', '')
+        masked_key = ''
+        if api_key:
+            masked_key = f"••••••••{api_key[-4:]}" if len(api_key) > 4 else '••••••••'
+        return {
+            'configured': bool(api_key and settings.get('ark_endpoint')),
+            'has_api_key': bool(api_key),
+            'api_key_masked': masked_key,
+            'endpoint': settings.get('ark_endpoint', ''),
+            'base_url': settings.get('ark_base_url', AISummarizer.DEFAULT_BASE_URL)
+        }
+
+    def update_ai_config(self, api_key: str = None, endpoint: str = None,
+                         base_url: str = None, clear_api_key: bool = False) -> bool:
+        """持久化火山方舟配置，并让下一次手动或定时检查立即使用新配置。"""
+        current = self._load_settings()
+        normalized_endpoint = current.get('ark_endpoint', '') if endpoint is None else endpoint.strip()
+        if not normalized_endpoint:
+            raise ValueError('模型ID/推理接入点不能为空')
+
+        normalized_base_url = self._validate_ark_base_url(
+            base_url if base_url is not None else current.get('ark_base_url')
+        )
+
+        with DatabaseManager(self.db_path) as db:
+            if clear_api_key:
+                db.set_setting('ark_api_key', '')
+            elif api_key is not None and api_key.strip():
+                db.set_setting('ark_api_key', api_key.strip())
+            db.set_setting('ark_endpoint', normalized_endpoint)
+            db.set_setting('ark_base_url', normalized_base_url)
+
+        # MultiWebsiteMonitor会缓存AISummarizer，清空后下一次检查会按新配置重建。
+        with self.lock:
+            self.monitor = None
+        logger.info("火山方舟AI配置已更新（API密钥未写入日志）")
+        return True
+
+    def test_ai_config(self, api_key: str = None, endpoint: str = None,
+                       base_url: str = None) -> Dict[str, Any]:
+        """测试已保存配置，或测试界面中尚未保存的新配置。"""
+        settings = self._load_settings()
+        effective_api_key = api_key.strip() if api_key and api_key.strip() else settings.get('ark_api_key', '')
+        effective_endpoint = endpoint.strip() if endpoint and endpoint.strip() else settings.get('ark_endpoint', '')
+        effective_base_url = self._validate_ark_base_url(
+            base_url if base_url is not None else settings.get('ark_base_url')
+        )
+        summarizer = AISummarizer(
+            api_key=effective_api_key,
+            endpoint=effective_endpoint,
+            base_url=effective_base_url,
+            request_delay=0
+        )
+        success, message = summarizer.test_connection()
+        return {'success': success, 'message': message} if success else {'success': False, 'error': message}
     
     def start_monitoring(self) -> bool:
         """
@@ -439,7 +540,7 @@ class MonitorService:
             try:
                 # 获取检查间隔
                 settings = self._load_settings()
-                check_interval_hours = settings.get("check_interval_hours", 2)
+                check_interval_hours = settings.get("check_interval_hours", 6)
                 check_interval_seconds = int(check_interval_hours * 3600)
                 
                 # 添加调度任务
@@ -519,7 +620,7 @@ class MonitorService:
             status = {
                 "is_running": self.is_running,
                 "monitor_enabled": settings.get("monitor_enabled", False),
-                "check_interval_hours": settings.get("check_interval_hours", 2),
+                "check_interval_hours": settings.get("check_interval_hours", 6),
                 "recipient_emails": settings.get("recipient_emails", []),
                 "website_count": len(get_all_websites()) if hasattr(get_all_websites, '__call__') else 0,
             }
@@ -871,7 +972,7 @@ class MonitorService:
             try:
                 # 获取当前检查间隔
                 settings = self._load_settings()
-                check_interval_hours = settings.get("check_interval_hours", 2)
+                check_interval_hours = settings.get("check_interval_hours", 6)
                 check_interval_seconds = int(check_interval_hours * 3600)
                 
                 # 移除旧任务

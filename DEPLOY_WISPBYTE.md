@@ -68,7 +68,7 @@ Wispbyte 可能支持直接从 GitHub 仓库部署：
      # 应用配置（可选）
      HOST=0.0.0.0
      PORT=5000
-     CHECK_INTERVAL_HOURS=2
+     CHECK_INTERVAL_HOURS=6
      MONITOR_ENABLED=1
      ```
 
@@ -126,7 +126,7 @@ Wispbyte 可能支持直接从 GitHub 仓库部署：
 |--------|------|--------|
 | `HOST` | 监听主机 | `0.0.0.0` |
 | `PORT` | 监听端口 | `5000` |
-| `CHECK_INTERVAL_HOURS` | 检查间隔（小时） | `2` |
+| `CHECK_INTERVAL_HOURS` | 检查间隔（小时） | `6` |
 | `MONITOR_ENABLED` | 监控启用状态 | `1` |
 
 ## 🔍 部署验证
