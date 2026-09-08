@@ -233,7 +233,8 @@ class AISummarizer:
 """
         return prompt
 
-    def _call_ark_api(self, prompt: str, max_tokens: int = 400) -> Optional[str]:
+    def _call_ark_api(self, prompt: str, max_tokens: int = 400,
+                      temperature: float = 0.7) -> Optional[str]:
         """
         调用火山方舟API
 
@@ -263,7 +264,7 @@ class AISummarizer:
                     }
                 ],
                 "max_tokens": max_tokens,
-                "temperature": 0.7
+                "temperature": temperature
             }
 
             response = self.session.post(
@@ -335,6 +336,61 @@ class AISummarizer:
         if result:
             return True, "火山方舟连接测试成功"
         return False, self.last_error or "火山方舟连接测试失败"
+
+    def extract_keywords_from_summary(
+        self,
+        title: str,
+        summary: str,
+        candidate_count: int = 16,
+        excluded_keywords: Optional[list[str]] = None,
+    ) -> Optional[list[str]]:
+        """使用同一个火山方舟模型从标题和AI总结中提取候选关键词。"""
+        if not self.is_configured():
+            self.last_error = "请先填写API Key和模型ID/推理接入点"
+            return None
+        if not summary or not summary.strip():
+            self.last_error = "报告没有可用于关键词提取的AI总结"
+            return None
+
+        candidate_count = max(10, min(int(candidate_count), 30))
+        excluded = "、".join(excluded_keywords or []) or "无"
+        prompt = f"""请根据报告标题和已有中文总结提取{candidate_count}个候选关键词。
+
+要求：
+1. 关键词使用中文，优先选择政策、技术、地区、机构、议题和关键概念
+2. 每个关键词2至7个字，不要年份、月份、\"报告\"、\"文章\"等文献类型词
+3. 不要使用以下已经提取的关键词：{excluded}
+4. 只输出合法JSON：{{"keywords":["关键词1","关键词2"]}}
+
+报告标题：{title}
+AI总结：{summary}
+"""
+        if self.request_delay:
+            time.sleep(self.request_delay)
+        result = self._call_ark_api(prompt, max_tokens=300, temperature=0.2)
+        return self._parse_keyword_result(result) if result else None
+
+    @staticmethod
+    def _parse_keyword_result(result: str) -> list[str]:
+        """解析关键词JSON，并兼容代码块、逗号或换行分隔输出。"""
+        if not result:
+            return []
+        cleaned = result.strip()
+        cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'\s*```$', '', cleaned)
+
+        json_match = re.search(r'\{.*\}', cleaned, flags=re.DOTALL)
+        if json_match:
+            try:
+                data = json.loads(json_match.group(0))
+                raw_keywords = data.get('keywords', []) if isinstance(data, dict) else []
+                if isinstance(raw_keywords, list):
+                    return [str(item).strip() for item in raw_keywords if str(item).strip()]
+                cleaned = str(raw_keywords)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                pass
+
+        return [item.strip(' -•\t') for item in re.split(r'[,，、;；\n]+', cleaned) if item.strip(' -•\t')]
 
     def _parse_result(self, result: str) -> Optional[Dict[str, str]]:
         """

@@ -3,6 +3,7 @@
 处理SQLite数据库的连接、表创建和数据插入
 """
 
+import json
 import sqlite3
 import logging
 from datetime import datetime
@@ -86,6 +87,16 @@ class DatabaseManager:
             error_message TEXT
         )
         """
+
+        create_kg_keywords_table_sql = """
+        CREATE TABLE IF NOT EXISTS report_kg_keywords (
+            report_id INTEGER PRIMARY KEY,
+            summary_hash TEXT NOT NULL,
+            keywords_json TEXT NOT NULL,
+            updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
+        )
+        """
         
         try:
             cursor = self.connection.cursor()
@@ -101,6 +112,10 @@ class DatabaseManager:
             # 创建监控运行表
             cursor.execute(create_monitor_runs_table_sql)
             logger.info("监控运行表创建成功或已存在")
+
+            # 缓存火山方舟为知识图谱提取的关键词，避免重复调用模型。
+            cursor.execute(create_kg_keywords_table_sql)
+            logger.info("知识图谱关键词缓存表创建成功或已存在")
             
             self.connection.commit()
             
@@ -592,6 +607,57 @@ class DatabaseManager:
         except sqlite3.Error as e:
             logger.error(f"获取所有设置失败: {e}")
             return {}
+
+    def get_report_kg_keywords_cache(self, report_ids: List[int]) -> Dict[int, Dict[str, Any]]:
+        """批量读取报告的知识图谱关键词缓存。"""
+        if not report_ids:
+            return {}
+        placeholders = ','.join('?' for _ in report_ids)
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(
+                f"SELECT report_id, summary_hash, keywords_json, updated_time "
+                f"FROM report_kg_keywords WHERE report_id IN ({placeholders})",
+                tuple(report_ids),
+            )
+            cache = {}
+            for row in cursor.fetchall():
+                try:
+                    keywords = json.loads(row['keywords_json'])
+                except (json.JSONDecodeError, TypeError):
+                    keywords = []
+                cache[row['report_id']] = {
+                    'summary_hash': row['summary_hash'],
+                    'keywords': keywords if isinstance(keywords, list) else [],
+                    'updated_time': row['updated_time'],
+                }
+            return cache
+        except sqlite3.Error as e:
+            logger.error(f"读取知识图谱关键词缓存失败: {e}")
+            return {}
+
+    def upsert_report_kg_keywords(self, report_id: int, summary_hash: str,
+                                  keywords: List[str]) -> bool:
+        """保存单篇报告的AI关键词缓存。"""
+        try:
+            self.connection.execute(
+                """
+                INSERT INTO report_kg_keywords (report_id, summary_hash, keywords_json, updated_time)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(report_id) DO UPDATE SET
+                    summary_hash = excluded.summary_hash,
+                    keywords_json = excluded.keywords_json,
+                    updated_time = CURRENT_TIMESTAMP
+                """,
+                (report_id, summary_hash, json.dumps(keywords, ensure_ascii=False)),
+            )
+            self.connection.commit()
+            return True
+        except sqlite3.Error as e:
+            logger.error(f"保存知识图谱关键词缓存失败: {e}")
+            self.connection.rollback()
+            return False
+
     def insert_monitor_run(self, start_time, end_time, duration_seconds, 
                           new_reports_count=0, results_json=None, 
                           status='success', error_message=None) -> Optional[int]:

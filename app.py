@@ -4,10 +4,14 @@ Flask Web界面主程序
 """
 
 import json
+import atexit
 import logging
 import os
+import threading
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # 可选依赖：CORS支持
 try:
@@ -20,7 +24,7 @@ except ImportError:
 
 from monitor_service import get_monitor_service
 from db import DatabaseManager
-from knowledge_graph import KnowledgeGraphBuilder, create_sample_data
+from knowledge_graph import KnowledgeGraphBuilder, create_sample_data, ANALYSIS_MONTHS, KEYWORDS_PER_REPORT
 
 # 配置日志
 logging.basicConfig(
@@ -43,20 +47,21 @@ monitor_service = get_monitor_service()
 
 # 知识图谱缓存配置
 KG_CACHE_FILE = './data/knowledge_graph_cache.json'
-KG_CACHE_DURATION_HOURS = 168  # 168小时 = 1周
+KG_TIMEZONE = ZoneInfo('Asia/Shanghai')
+KG_DEFAULT_TOP_K = KEYWORDS_PER_REPORT
+KG_DEFAULT_GLOBAL_TOP_N = 50
+KG_CACHE_LOCK = threading.Lock()
+kg_scheduler = None
 os.makedirs(os.path.dirname(KG_CACHE_FILE), exist_ok=True)
 
 
-def is_cache_valid() -> bool:
-    """检查知识图谱缓存是否有效"""
-    if not os.path.exists(KG_CACHE_FILE):
-        return False
-    try:
-        file_mtime = datetime.fromtimestamp(os.path.getmtime(KG_CACHE_FILE))
-        return datetime.now() - file_mtime < timedelta(hours=KG_CACHE_DURATION_HOURS)
-    except Exception as e:
-        logger.warning(f"检查缓存文件失败: {e}")
-        return False
+def get_kg_cycle(now=None) -> str:
+    """返回最近一个周五（北京时间），作为每周图谱版本号。"""
+    current = now or datetime.now(KG_TIMEZONE)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=KG_TIMEZONE)
+    days_since_friday = (current.weekday() - 4) % 7
+    return (current - timedelta(days=days_since_friday)).date().isoformat()
 
 
 def load_cache():
@@ -69,34 +74,91 @@ def load_cache():
         return None
 
 
-def save_cache(data):
-    """保存知识图谱到缓存文件"""
+def get_valid_kg_cache(top_k: int, global_top_n: int):
+    """只返回属于当前周五周期且参数匹配的缓存。"""
+    payload = load_cache()
+    if not isinstance(payload, dict):
+        return None
+    metadata = payload.get('metadata', {})
+    if (
+        metadata.get('cycle') == get_kg_cycle()
+        and metadata.get('top_k') == top_k
+        and metadata.get('global_top_n') == global_top_n
+    ):
+        return payload.get('data')
+    return None
+
+
+def save_cache(data, top_k: int, global_top_n: int):
+    """原子保存带周期和参数元数据的知识图谱缓存。"""
     try:
-        with open(KG_CACHE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False)
+        payload = {
+            'metadata': {
+                'cycle': get_kg_cycle(),
+                'generated_at': datetime.now(KG_TIMEZONE).isoformat(),
+                'top_k': top_k,
+                'global_top_n': global_top_n,
+                'analysis_months': ANALYSIS_MONTHS,
+            },
+            'data': data,
+        }
+        temp_path = f'{KG_CACHE_FILE}.tmp'
+        with open(temp_path, 'w', encoding='utf-8') as f:
+            json.dump(payload, f, ensure_ascii=False)
+        os.replace(temp_path, KG_CACHE_FILE)
         logger.info("知识图谱缓存已更新")
     except Exception as e:
         logger.error(f"保存缓存失败: {e}")
 
 
-def build_and_cache_kg(top_k: int = 10, global_top_n: int = 50):
-    """构建知识图谱并缓存"""
-    try:
-        builder = KnowledgeGraphBuilder()
-        builder.load_reports(use_db=True, days=30)
-        
-        if not builder.reports:
-            logger.info("数据库中没有报告数据，创建示例数据")
-            create_sample_data()
-            builder.load_reports(use_db=False)
-        
-        builder.process_reports(top_k_keywords=top_k, global_top_n=global_top_n)
-        graph_data = builder.build_graph_data()
-        save_cache(graph_data)
-        return graph_data
-    except Exception as e:
-        logger.error(f"构建知识图谱失败: {e}")
+def build_and_cache_kg(top_k: int = KG_DEFAULT_TOP_K,
+                       global_top_n: int = KG_DEFAULT_GLOBAL_TOP_N,
+                       persist_cache: bool = True):
+    """从两个月内已有AI总结的报告构建知识图谱。"""
+    with KG_CACHE_LOCK:
+        try:
+            builder = KnowledgeGraphBuilder()
+            builder.load_reports(use_db=True, months=ANALYSIS_MONTHS)
+            builder.process_reports(top_k_keywords=top_k, global_top_n=global_top_n)
+            graph_data = builder.build_graph_data()
+            if persist_cache:
+                save_cache(graph_data, top_k, global_top_n)
+            return graph_data
+        except Exception as e:
+            logger.error(f"构建知识图谱失败: {e}")
+            return None
+
+
+def _scheduled_kg_refresh():
+    logger.info("开始执行周五知识图谱更新")
+    build_and_cache_kg(KG_DEFAULT_TOP_K, KG_DEFAULT_GLOBAL_TOP_N, persist_cache=True)
+
+
+def start_kg_scheduler():
+    """每周五03:00（北京时间）更新默认知识图谱。"""
+    global kg_scheduler
+    if os.environ.get('ENABLE_KG_SCHEDULER', '1').lower() in {'0', 'false', 'no'}:
         return None
+    if kg_scheduler and kg_scheduler.running:
+        return kg_scheduler
+    kg_scheduler = BackgroundScheduler(timezone=str(KG_TIMEZONE))
+    kg_scheduler.add_job(
+        _scheduled_kg_refresh,
+        trigger='cron',
+        day_of_week='fri',
+        hour=3,
+        minute=0,
+        id='weekly_knowledge_graph_refresh',
+        replace_existing=True,
+        coalesce=True,
+        max_instances=1,
+    )
+    kg_scheduler.start()
+    atexit.register(lambda: kg_scheduler.shutdown(wait=False) if kg_scheduler and kg_scheduler.running else None)
+    return kg_scheduler
+
+
+start_kg_scheduler()
 
 
 @app.route('/')
@@ -671,28 +733,29 @@ def knowledge_graph_page():
 
 @app.route('/api/knowledge-graph', methods=['GET'])
 def api_knowledge_graph():
-    """获取知识图谱数据API - 使用缓存机制"""
+    """获取知识图谱数据；默认缓存按每周五版本更新。"""
     try:
-        top_k = request.args.get('top_k', 10, type=int)
-        global_top_n = request.args.get('global_top_n', 50, type=int)
-        
-        cache_top_k = 10
-        cache_global_top_n = 50
-        
-        if top_k == cache_top_k and global_top_n == cache_global_top_n and is_cache_valid():
-            cached_data = load_cache()
-            if cached_data:
-                logger.info("使用缓存的知识图谱数据")
-                return jsonify({
-                    'success': True,
-                    'data': cached_data
-                })
-        
-        graph_data = build_and_cache_kg(top_k=top_k, global_top_n=global_top_n)
+        top_k = max(5, min(request.args.get('top_k', KG_DEFAULT_TOP_K, type=int), KEYWORDS_PER_REPORT))
+        global_top_n = max(20, min(request.args.get('global_top_n', KG_DEFAULT_GLOBAL_TOP_N, type=int), 100))
+        force_refresh = request.args.get('force', '0').lower() in {'1', 'true', 'yes'}
+
+        is_default = top_k == KG_DEFAULT_TOP_K and global_top_n == KG_DEFAULT_GLOBAL_TOP_N
+        if is_default and not force_refresh:
+            cached_data = get_valid_kg_cache(top_k, global_top_n)
+            if cached_data is not None:
+                logger.info("使用当前周五周期的知识图谱缓存")
+                return jsonify({'success': True, 'data': cached_data, 'cached': True})
+
+        graph_data = build_and_cache_kg(
+            top_k=top_k,
+            global_top_n=global_top_n,
+            persist_cache=is_default,
+        )
         if graph_data:
             return jsonify({
                 'success': True,
-                'data': graph_data
+                'data': graph_data,
+                'cached': False,
             })
         else:
             return jsonify({

@@ -28,6 +28,15 @@ def test_ai_result_parser_accepts_json_and_legacy_multiline():
     assert parsed_legacy["summary"] == "第一句。 第二句。"
 
 
+def test_ai_keyword_parser_accepts_json_and_delimited_text():
+    assert AISummarizer._parse_keyword_result(
+        '```json\n{"keywords":["气候变化","能源转型","城市治理"]}\n```'
+    ) == ["气候变化", "能源转型", "城市治理"]
+    assert AISummarizer._parse_keyword_result("气候变化，能源转型\n城市治理") == [
+        "气候变化", "能源转型", "城市治理"
+    ]
+
+
 def test_database_defaults_to_six_hours(tmp_path):
     db_path = tmp_path / "reports.db"
     with DatabaseManager(str(db_path)) as db:

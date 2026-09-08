@@ -4,23 +4,21 @@
 """
 
 import json
+import hashlib
 import logging
+import os
 import re
 from collections import defaultdict, Counter
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 
+from ai_summarizer import AISummarizer
 from db import DatabaseManager
 
 logger = logging.getLogger(__name__)
 
-try:
-    import jieba
-    import jieba.analyse
-    JIEBA_AVAILABLE = True
-except ImportError:
-    JIEBA_AVAILABLE = False
-    logger.warning("jieba模块未安装，将使用简单关键词提取方法")
+KEYWORDS_PER_REPORT = 10
+ANALYSIS_MONTHS = 2
 
 
 TRANSLATION_DICT = {
@@ -153,7 +151,9 @@ STOP_KEYWORDS = {
 class KnowledgeGraphBuilder:
     """知识图谱构建器"""
     
-    def __init__(self, data_path: str = "./data/reports_last_10days.json"):
+    def __init__(self, data_path: str = "./data/reports_last_10days.json",
+                 db_path: Optional[str] = None,
+                 ai_summarizer: Optional[AISummarizer] = None):
         """
         初始化知识图谱构建器
         
@@ -161,6 +161,8 @@ class KnowledgeGraphBuilder:
             data_path: 报告数据文件路径
         """
         self.data_path = data_path
+        self.db_path = db_path or os.environ.get('DATABASE_PATH', 'reports.db')
+        self.ai_summarizer = ai_summarizer
         self.reports = []
         self.keyword_freq = Counter()
         self.keyword_reports = defaultdict(list)
@@ -233,7 +235,10 @@ class KnowledgeGraphBuilder:
         if keyword_lower in STOP_KEYWORDS:
             return False
         
-        if re.match(r'^\d{4}$', keyword_lower):
+        if re.fullmatch(r'(?:19|20)\d{2}年?', keyword_lower):
+            return False
+
+        if re.fullmatch(r'(?:0?[1-9]|1[0-2])月', keyword_lower):
             return False
         
         if len(keyword_stripped) < 2:
@@ -241,79 +246,78 @@ class KnowledgeGraphBuilder:
         
         return True
     
-    def load_reports_from_db(self, days: int = 30) -> List[Dict[str, Any]]:
-        """
-        从数据库加载最近N天的报告数据
-        
-        Args:
-            days: 天数，默认为30天
-            
-        Returns:
-            报告列表
-        """
+    @staticmethod
+    def _subtract_months(value: datetime, months: int) -> datetime:
+        """按日历月计算时间窗口起点。"""
+        month_index = value.year * 12 + value.month - 1 - months
+        year, month_zero_based = divmod(month_index, 12)
+        month = month_zero_based + 1
+        if month == 12:
+            next_month = datetime(year + 1, 1, 1)
+        else:
+            next_month = datetime(year, month + 1, 1)
+        last_day = (next_month - timedelta(days=1)).day
+        return value.replace(year=year, month=month, day=min(value.day, last_day))
+
+    def load_reports_from_db(self, months: int = ANALYSIS_MONTHS,
+                             now: Optional[datetime] = None) -> List[Dict[str, Any]]:
+        """读取最近若干日历月内录入、且已经生成AI总结的报告。"""
         try:
-            with DatabaseManager('reports.db') as db:
+            with DatabaseManager(self.db_path) as db:
                 all_reports = db.get_all_reports()
-            
-            cutoff_date = datetime.now() - timedelta(days=days)
+
+            cutoff_date = self._subtract_months(now or datetime.now(), months)
             self.reports = []
-            
             for report in all_reports:
                 try:
-                    discovered_time_str = report['discovered_time']
+                    discovered_time_str = str(report.get('discovered_time') or '')
                     if 'T' in discovered_time_str:
                         discovered_time = datetime.fromisoformat(discovered_time_str.replace('Z', '+00:00'))
                         if discovered_time.tzinfo is not None:
                             discovered_time = discovered_time.replace(tzinfo=None)
                     else:
                         discovered_time = datetime.strptime(discovered_time_str, '%Y-%m-%d %H:%M:%S')
-                    
-                    if discovered_time >= cutoff_date:
-                        title = report.get('title', '')
-                        ai_summary = report.get('ai_summary', '')
-                        
-                        if ai_summary and ai_summary != 'N/A':
-                            content = ai_summary
-                        else:
-                            content = title
-                        
+
+                    ai_summary = str(report.get('ai_summary') or '').strip()
+                    if discovered_time >= cutoff_date and ai_summary and ai_summary != 'N/A':
                         self.reports.append({
-                            'title': title,
+                            'id': report['id'],
+                            'title': report.get('title', ''),
                             'url': report.get('url', ''),
-                            'content': content,
-                            'date': discovered_time.strftime('%Y-%m-%d')
+                            'summary': ai_summary,
+                            'content': ai_summary,
+                            'date': discovered_time.strftime('%Y-%m-%d'),
                         })
                 except Exception as e:
                     logger.warning(f"解析报告时间失败: {e}")
-                    continue
-            
-            logger.info(f"从数据库成功加载最近 {days} 天的 {len(self.reports)} 篇报告")
+
+            logger.info(f"从数据库加载最近 {months} 个月内已有AI总结的 {len(self.reports)} 篇报告")
             return self.reports
-            
         except Exception as e:
             logger.error(f"从数据库加载数据失败: {e}")
             return []
-    
-    def load_reports(self, use_db: bool = True, days: int = 30) -> List[Dict[str, Any]]:
-        """
-        加载报告数据（优先从数据库加载）
-        
-        Args:
-            use_db: 是否优先从数据库加载
-            days: 从数据库加载的天数
-            
-        Returns:
-            报告列表
-        """
+
+    def load_reports(self, use_db: bool = True,
+                     months: int = ANALYSIS_MONTHS) -> List[Dict[str, Any]]:
+        """加载图谱报告；生产环境只使用数据库中的已总结报告。"""
         if use_db:
-            reports = self.load_reports_from_db(days=days)
-            if reports:
-                return reports
-        
+            return self.load_reports_from_db(months=months)
+
         try:
             with open(self.data_path, 'r', encoding='utf-8') as f:
-                self.reports = json.load(f)
-            logger.info(f"成功从文件加载 {len(self.reports)} 篇报告")
+                raw_reports = json.load(f)
+            self.reports = []
+            for index, report in enumerate(raw_reports):
+                content = str(report.get('content') or '').strip()
+                if content:
+                    self.reports.append({
+                        'id': report.get('id', index),
+                        'title': report.get('title', ''),
+                        'url': report.get('url', ''),
+                        'summary': content,
+                        'content': content,
+                        'date': report.get('date', ''),
+                    })
             return self.reports
         except FileNotFoundError:
             logger.warning(f"数据文件未找到: {self.data_path}")
@@ -321,75 +325,64 @@ class KnowledgeGraphBuilder:
         except Exception as e:
             logger.error(f"加载数据失败: {e}")
             return []
-    
-    def extract_keywords(self, text: str, top_k: int = 10) -> List[str]:
-        """
-        从文本中提取关键词（提取后再翻译）
-        
-        Args:
-            text: 文本内容
-            top_k: 返回关键词数量
-            
-        Returns:
-            关键词列表（仅中文）
-        """
-        if not text or len(text.strip()) == 0:
-            return []
-        
-        cleaned_text = self._clean_text(text)
-        
-        keywords = []
-        
-        if JIEBA_AVAILABLE:
-            try:
-                jieba_keywords = jieba.analyse.extract_tags(cleaned_text, topK=top_k * 2, withWeight=False)
-                keywords.extend(jieba_keywords)
-            except Exception as e:
-                logger.warning(f"jieba提取关键词失败: {e}")
-        
-        simple_keywords = self._simple_extract_keywords(cleaned_text, top_k * 2)
-        keywords.extend(simple_keywords)
-        
+
+    def _get_ai_summarizer(self) -> AISummarizer:
+        if self.ai_summarizer is not None:
+            return self.ai_summarizer
+        with DatabaseManager(self.db_path) as db:
+            settings = db.get_all_settings()
+        self.ai_summarizer = AISummarizer(
+            api_key=settings.get('ark_api_key', '').strip() or os.environ.get('ARK_API_KEY', '').strip(),
+            endpoint=settings.get('ark_endpoint', '').strip() or os.environ.get('ARK_ENDPOINT', '').strip(),
+            base_url=(settings.get('ark_base_url', '').strip()
+                      or os.environ.get('ARK_BASE_URL', AISummarizer.DEFAULT_BASE_URL).strip()),
+        )
+        return self.ai_summarizer
+
+    def _normalize_keywords(self, keywords: List[str], top_k: int = KEYWORDS_PER_REPORT) -> List[str]:
         normalized_keywords = []
         seen = set()
-        
-        for kw in keywords:
-            normalized = self.normalize_keyword(kw)
-            
-            if (self.is_valid_keyword(normalized) and 
-                normalized not in seen and 
-                self._is_chinese(normalized)):
+        for keyword in keywords:
+            cleaned = re.sub(r'^(关键词|主题词)\s*[:：]?\s*', '', str(keyword)).strip()
+            normalized = self.normalize_keyword(cleaned)
+            if (self.is_valid_keyword(normalized)
+                    and normalized not in seen
+                    and self._is_chinese(normalized)
+                    and len(normalized) <= 7):
                 normalized_keywords.append(normalized)
                 seen.add(normalized)
                 if len(normalized_keywords) >= top_k:
                     break
-        
         return normalized_keywords
-    
-    def _clean_text(self, text: str) -> str:
-        """清理文本"""
-        text = re.sub(r'[^\w\s\u4e00-\u9fa5]', ' ', text)
-        text = re.sub(r'\s+', ' ', text)
-        return text.strip()
-    
-    def _simple_extract_keywords(self, text: str, top_k: int = 10) -> List[str]:
-        """简单关键词提取（备用方法）"""
-        stop_words = {
-            '的', '了', '和', '是', '就', '都', '而', '及', '与', '在', '对', '为',
-            '有', '等', '这', '那', '也', '但', '或', '并', '个', '之', '以', '于',
-            'the', 'and', 'of', 'to', 'in', 'for', 'is', 'are', 'on', 'with', 'that',
-            'this', 'by', 'from', 'at', 'it', 'as', 'be', 'or', 'an', 'but', 'we', 'you',
-            'a', 'an', 'can', 'will', 'would', 'could', 'should', 'may', 'might', 'must',
-            'need', 'dare', 'ought', 'used', 'have', 'has', 'had', 'do', 'does', 'did',
-            'shall', 'will', 'may', 'might', 'must', 'can', 'could', 'would', 'should'
-        }
-        
-        words = re.findall(r'[\u4e00-\u9fa5]{2,4}|[a-zA-Z]{3,}', text.lower())
-        word_freq = Counter(w for w in words if w not in stop_words)
-        
-        return [word for word, _ in word_freq.most_common(top_k)]
-    
-    def process_reports(self, top_k_keywords: int = 10, global_top_n: int = 100):
+
+    @staticmethod
+    def _summary_hash(report: Dict[str, Any]) -> str:
+        source = f"{report.get('title', '')}\0{report.get('summary', '')}"
+        return hashlib.sha256(source.encode('utf-8')).hexdigest()
+
+    def _extract_ai_keywords(self, report: Dict[str, Any]) -> List[str]:
+        summarizer = self._get_ai_summarizer()
+        if not summarizer.is_configured():
+            raise RuntimeError("火山方舟AI未配置，无法更新知识图谱关键词")
+
+        candidates: List[str] = []
+        for _ in range(3):
+            batch = summarizer.extract_keywords_from_summary(
+                report.get('title', ''),
+                report.get('summary', ''),
+                candidate_count=20,
+                excluded_keywords=candidates,
+            )
+            if batch:
+                candidates.extend(batch)
+            normalized = self._normalize_keywords(candidates, KEYWORDS_PER_REPORT)
+            if len(normalized) == KEYWORDS_PER_REPORT:
+                return normalized
+        logger.warning("报告ID %s仅提取到 %s 个有效关键词", report.get('id'), len(normalized))
+        return normalized
+
+    def process_reports(self, top_k_keywords: int = KEYWORDS_PER_REPORT,
+                        global_top_n: int = 100):
         """
         处理所有报告，提取关键词并统计
         
@@ -409,24 +402,41 @@ class KnowledgeGraphBuilder:
         self.report_keywords.clear()
         self.cooccurrence.clear()
         
-        for idx, report in enumerate(self.reports):
-            report_id = idx
-            title = report.get('title', '')
-            content = report.get('content', '')
-            
-            full_text = f"{title} {content}"
-            keywords = self.extract_keywords(full_text, top_k=top_k_keywords)
-            
-            self.report_keywords[report_id] = keywords
-            
-            for keyword in keywords:
-                self.keyword_freq[keyword] += 1
-                self.keyword_reports[keyword].append(report_id)
-            
-            for i, kw1 in enumerate(keywords):
-                for kw2 in keywords[i+1:]:
-                    self.cooccurrence[kw1][kw2] += 1
-                    self.cooccurrence[kw2][kw1] += 1
+        requested_keyword_count = max(1, min(int(top_k_keywords), KEYWORDS_PER_REPORT))
+        report_ids = [int(report['id']) for report in self.reports]
+        with DatabaseManager(self.db_path) as db:
+            cache = db.get_report_kg_keywords_cache(report_ids)
+
+            for position, report in enumerate(self.reports, start=1):
+                report_id = int(report['id'])
+                summary_hash = self._summary_hash(report)
+                cached = cache.get(report_id, {})
+                all_keywords = self._normalize_keywords(cached.get('keywords', []), KEYWORDS_PER_REPORT)
+
+                if cached.get('summary_hash') != summary_hash or len(all_keywords) != KEYWORDS_PER_REPORT:
+                    logger.info(
+                        "正在提取知识图谱关键词 %s/%s（报告ID %s）",
+                        position, len(self.reports), report_id,
+                    )
+                    all_keywords = self._extract_ai_keywords(report)
+                    if len(all_keywords) != KEYWORDS_PER_REPORT:
+                        raise RuntimeError(
+                            f"报告ID {report_id}未能提取到{KEYWORDS_PER_REPORT}个有效AI关键词"
+                        )
+                    if not db.upsert_report_kg_keywords(report_id, summary_hash, all_keywords):
+                        raise RuntimeError(f"报告ID {report_id}的知识图谱关键词缓存保存失败")
+
+                keywords = all_keywords[:requested_keyword_count]
+                self.report_keywords[report_id] = keywords
+
+                for keyword in keywords:
+                    self.keyword_freq[keyword] += 1
+                    self.keyword_reports[keyword].append(report_id)
+
+                for index, keyword in enumerate(keywords):
+                    for other_keyword in keywords[index + 1:]:
+                        self.cooccurrence[keyword][other_keyword] += 1
+                        self.cooccurrence[other_keyword][keyword] += 1
         
         if global_top_n > 0:
             top_keywords = set([kw for kw, _ in self.keyword_freq.most_common(global_top_n)])
@@ -470,8 +480,8 @@ class KnowledgeGraphBuilder:
                 'color': self._get_color_by_frequency(freq, max_freq)
             })
         
-        for idx, report in enumerate(self.reports):
-            report_id = idx
+        for report in self.reports:
+            report_id = int(report['id'])
             title = report.get('title', '')
             url = report.get('url', '')
             date = report.get('date', '')
@@ -521,11 +531,20 @@ class KnowledgeGraphBuilder:
                         'is_high_cooccur': is_high_cooccur
                     })
         
+        reports_by_id = {int(report['id']): report for report in self.reports}
         return {
             'nodes': nodes,
             'edges': edges,
             'reports': self.reports,
-            'keyword_reports': {kw: [self.reports[idx] for idx in idxs] for kw, idxs in self.keyword_reports.items()}
+            'keyword_reports': {
+                keyword: [reports_by_id[report_id] for report_id in report_ids if report_id in reports_by_id]
+                for keyword, report_ids in self.keyword_reports.items()
+            },
+            'metadata': {
+                'analysis_months': ANALYSIS_MONTHS,
+                'keywords_per_report': KEYWORDS_PER_REPORT,
+                'report_count': len(self.reports),
+            },
         }
     
     def _get_color_by_frequency(self, freq: int, max_freq: int) -> str:

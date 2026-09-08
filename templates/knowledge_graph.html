@@ -95,7 +95,7 @@
 <div class="row">
     <div class="col-12 mb-4">
         <h2 class="mb-3">知识图谱</h2>
-        <p class="text-muted">探索最近30天智库报告中的知识关联</p>
+        <p class="text-muted">探索近两个月已生成AI总结的智库报告；默认图谱每周五更新</p>
     </div>
 </div>
 
@@ -106,8 +106,8 @@
                 <h6 class="card-title">控制面板</h6>
                 <div class="mb-3">
                     <label class="form-label small">每篇报告关键词数</label>
-                    <input type="number" class="form-control form-control-sm" id="topK" value="10" min="5" max="20">
-                    <small class="text-muted">范围：5-20</small>
+                    <input type="number" class="form-control form-control-sm" id="topK" value="10" min="5" max="10">
+                    <small class="text-muted">AI每篇固定提取10个，可显示5-10个</small>
                 </div>
                 <div class="mb-3">
                     <label class="form-label small">全局关键词数量</label>
@@ -275,8 +275,8 @@
         return Math.min(Math.max(value, min), max);
     }
 
-    async function loadGraphData() {
-        var topK = clamp(parseInt(document.getElementById('topK').value) || 10, 5, 20);
+    async function loadGraphData(forceRefresh) {
+        var topK = clamp(parseInt(document.getElementById('topK').value) || 10, 5, 10);
         var globalTopN = clamp(parseInt(document.getElementById('globalTopN').value) || 50, 20, 100);
         
         document.getElementById('topK').value = topK;
@@ -285,7 +285,8 @@
         log('开始加载...');
 
         try {
-            var response = await fetch('/api/knowledge-graph?top_k=' + topK + '&global_top_n=' + globalTopN);
+            var forceParam = forceRefresh ? '&force=1' : '';
+            var response = await fetch('/api/knowledge-graph?top_k=' + topK + '&global_top_n=' + globalTopN + forceParam);
             var result = await response.json();
 
             if (result.success) {
@@ -424,7 +425,9 @@
         document.getElementById('overlay').classList.remove('show');
     }
 
-    document.getElementById('refreshBtn').addEventListener('click', loadGraphData);
+    document.getElementById('refreshBtn').addEventListener('click', function() {
+        loadGraphData(true);
+    });
     document.getElementById('closeSidebar').addEventListener('click', closeSidebar);
     document.getElementById('overlay').addEventListener('click', closeSidebar);
 
@@ -434,7 +437,7 @@
         backdrops.forEach(function(b) { b.remove(); });
         log('页面加载');
         initCytoscape();
-        setTimeout(loadGraphData, 500);
+        setTimeout(function() { loadGraphData(false); }, 500);
     });
 </script>
 {% endblock %}
