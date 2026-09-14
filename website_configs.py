@@ -4,7 +4,10 @@
 """
 
 from typing import List, Dict, Callable, Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -46,6 +49,12 @@ class WebsiteConfig:
         # 对所有报告应用过滤和清理
         filtered_reports = []
         for report in reports:
+            report_location = urlsplit(report['url'])
+            listing_location = urlsplit(base_url)
+            if (report_location.netloc.lower(), report_location.path.rstrip('/')) == (
+                listing_location.netloc.lower(), listing_location.path.rstrip('/')
+            ):
+                continue
             cleaned_title = self._clean_title(report['title'])
             if not cleaned_title:
                 continue
@@ -243,7 +252,9 @@ class WebsiteConfig:
             'sign up', 'sign in', 'log in', 'register'
         ]
         
-        url_lower = url.lower()
+        # Tracking parameters (for example dgcid=rss_sd_all) are not navigation.
+        parsed_url = urlsplit(url)
+        url_lower = (parsed_url.netloc + parsed_url.path).lower()
         title_lower = title.lower()
         
         for keyword in exclude_keywords:

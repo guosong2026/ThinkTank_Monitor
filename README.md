@@ -50,6 +50,14 @@ python monitor.py --stats
 python monitor.py --test
 ```
 
+### 全部来源连接与解析检查
+
+```bash
+python check_websites.py --json data/monitor_health.json
+```
+
+使用常规多网站监控的请求配置、重试逻辑和解析器，检查全部已配置来源。只执行抓取与解析，不写入报告数据库、不调用 AI、不发送邮件；默认并发数为 4，可用 `--workers 1` 改为串行。只有成功抓取且解析出报告才算通过，HTTP 错误、网络失败、解析异常及零报告均返回非零退出码。JSON 中保留检测时间、最终 URL、HTTP 状态及报告样例，便于在部署环境复测。一次通过表示检测时的抓取链路可用，不代表调度服务已启动。
+
 ### 自定义配置
 
 ```bash
