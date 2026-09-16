@@ -70,3 +70,9 @@ test_*.py
 
 # Generated knowledge graph data
 data/knowledge_graph_cache.json
+
+# Temporary source retrieval evidence; keep the reviewed repair manifest and notes.
+data/repair_20260916/*
+!data/repair_20260916/summaries.json
+!data/repair_20260916/repair_notes.md
+hotfix-20260916.zip

@@ -14,6 +14,7 @@ from scraper import WebsiteScraper
 from email_sender import EmailSender
 from website_configs import WebsiteConfig, get_all_websites
 from ai_summarizer import AISummarizer
+from summary_recovery import recover_missing_summaries
 
 # 配置日志
 logging.basicConfig(
@@ -163,6 +164,10 @@ class WebsiteMonitor:
         
         try:
             logger.info("开始单次监控检查")
+            try:
+                recover_missing_summaries(self.db_path, self.ai_summarizer)
+            except Exception:
+                logger.exception("摘要补偿失败，继续执行新报告监控")
             
             # 创建抓取器和数据库管理器
             with WebsiteScraper(self.target_url) as scraper, \
@@ -599,6 +604,10 @@ class MultiWebsiteMonitor:
             Dict[str, int]: 每个网站发现的新报告数量
         """
         results = {}
+        try:
+            recover_missing_summaries(self.db_path, self.ai_summarizer)
+        except Exception:
+            logger.exception("摘要补偿失败，继续执行新报告监控")
         total_new_reports = 0
         total_sites = len(self.website_configs)
         

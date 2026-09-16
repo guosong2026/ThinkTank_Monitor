@@ -57,7 +57,7 @@
                                 </td>
                                 <td>
                                     {% if report.ai_chinese_title or report.ai_keywords or report.ai_summary %}
-                                    <button class="btn-ai-summary" onclick="showAIModal('{{ report.id }}', '{{ report.ai_chinese_title|escape }}', '{{ report.ai_summary|escape }}')">
+                                    <button class="btn-ai-summary" data-report-id="{{ report.id }}" data-ai-title="{{ report.ai_chinese_title or '' }}" data-ai-summary="{{ report.ai_summary or '' }}">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                                         查看
                                     </button>
@@ -602,6 +602,13 @@
             document.getElementById('end-date').value = '';
             window.location.href = '/reports?limit=20';
         });
+    });
+
+    document.addEventListener('click', function(event) {
+        const button = event.target.closest('.btn-ai-summary');
+        if (button) {
+            showAIModal(button.dataset.reportId, button.dataset.aiTitle, button.dataset.aiSummary);
+        }
     });
 
     function showAIModal(id, title, summary) {
