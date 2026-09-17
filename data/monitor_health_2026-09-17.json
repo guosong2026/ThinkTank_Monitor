@@ -1,0 +1,645 @@
+{
+  "checked_at": "2026-09-17T04:52:43.764924+00:00",
+  "total": 16,
+  "passed": 16,
+  "results": [
+    {
+      "name": "CONCITO",
+      "url": "https://concito.dk/en/analyser",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://concito.dk/en/analyser",
+      "error": null,
+      "reports_found": 6,
+      "reports": [
+        {
+          "title": "Status of climate action in Danish municipalities",
+          "url": "https://concito.dk/en/udgivelser/status_paa_kommunernes_klimahandling_april2025",
+          "source": "CONCITO"
+        },
+        {
+          "title": "Status report 2026",
+          "url": "https://concito.dk/en/analyser/godt-paa-vej-men-ikke-maal",
+          "source": "CONCITO"
+        },
+        {
+          "title": "The right path, but not the right pace",
+          "url": "https://concito.dk/en/analyser/godt-paa-vej-men-ikke-maal-sammenfatning",
+          "source": "CONCITO"
+        },
+        {
+          "title": "National Climate Risk Assessments: What We Can Learn from Country Approaches",
+          "url": "https://concito.dk/en/analyser/national-climate-risk-assessments-what-we-can-learn-from-country-approaches",
+          "source": "CONCITO"
+        },
+        {
+          "title": "Facilitating a Level Playing Field for the European Cement Sector",
+          "url": "https://concito.dk/en/analyser/facilitating-a-level-playing-field-the-european-cement-sector",
+          "source": "CONCITO"
+        },
+        {
+          "title": "Europe as a global actor for climate, security and prosperity",
+          "url": "https://concito.dk/en/analyser/europe-as-a-global-actor-climate-security-and-prosperity",
+          "source": "CONCITO"
+        }
+      ]
+    },
+    {
+      "name": "EEB",
+      "url": "https://eeb.org/en/library/",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://eeb.org/en/library/",
+      "error": null,
+      "reports_found": 6,
+      "reports": [
+        {
+          "title": "Open letter to European Commission: Make nature-based solutions the first line of defence against climate disasters Categories: Climate Change, Water Types: Joint Publication, Letter Published: 14 September 2026",
+          "url": "https://eeb.org/en/library/open-letter-to-european-commission-make-nature-based-solutions-the-first-line-of-defence-against-climate-disasters/",
+          "source": "EEB"
+        },
+        {
+          "title": "Open letter urging the European Commission to deliver on promise to End the Cage Age Categories: Animal Welfare, Farming, Nature & Agriculture Types: Joint Publication, Letter Published: 9 September 2026",
+          "url": "https://eeb.org/en/library/open-letter-urging-the-european-commission-to-deliver-on-promise-to-end-the-cage-age/",
+          "source": "EEB"
+        },
+        {
+          "title": "Civil society letter on the role of the EU Governance Regulation for agriculture Categories: Climate Change, Nature & Agriculture Types: Letter Published: 9 September 2026",
+          "url": "https://eeb.org/en/library/civil-society-letter-on-the-role-of-the-eu-governance-regulation-for-agriculture/",
+          "source": "EEB"
+        },
+        {
+          "title": "Complaint to EU Ombudsman: Maladministration of the European Commission in its decision to revise the Water Framework Directive Categories: Water Types: Joint Publication, Position Published: 8 September 2026",
+          "url": "https://eeb.org/en/library/complaint-to-eu-ombudsman-maladministration-of-the-european-commission-in-its-decision-to-revise-the-water-framework-directive/",
+          "source": "EEB"
+        },
+        {
+          "title": "The EEB Leaders Declaration Categories: EU Governance Types: Letter Published: 7 September 2026",
+          "url": "https://eeb.org/en/library/the-eeb-leaders-declaration/",
+          "source": "EEB"
+        },
+        {
+          "title": "Feedback on the European Commission’s initiative to update the European list of ship recycling facilities Categories: Circular Economy, Waste and Recycling Types: Response Published: 28 August 2026",
+          "url": "https://eeb.org/en/library/feedback-on-the-european-commissions-initiative-to-update-the-european-list-of-ship-recycling-facilities/",
+          "source": "EEB"
+        }
+      ]
+    },
+    {
+      "name": "Green Alliance",
+      "url": "https://green-alliance.org.uk",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://green-alliance.org.uk/",
+      "error": null,
+      "reports_found": 2,
+      "reports": [
+        {
+          "title": "Tackling food security by futureproofing the UK’s diet",
+          "url": "https://green-alliance.org.uk/wp-content/uploads/2026/09/Tackling-food-security-by-futureproofing-the-UKs-diet-1.pdf",
+          "source": "Green Alliance"
+        },
+        {
+          "title": "How to get Britain climate ready",
+          "url": "https://green-alliance.org.uk/publication/how-to-get-britain-climate-ready/",
+          "source": "Green Alliance"
+        }
+      ]
+    },
+    {
+      "name": "Pembina Institute",
+      "url": "https://www.pembina.org/all",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://www.pembina.org/all",
+      "error": null,
+      "reports_found": 5,
+      "reports": [
+        {
+          "title": "Customer Energy September 10, 2026 Article Alberta’s overlooked electricity resource is hiding in plain sight Demand-side management can reduce peak demand, lower system costs and help the grid keep pace with industrial expansion, data centres and electrification",
+          "url": "https://www.pembina.org/blog/albertas-overlooked-electricity-resource-hiding-plain-sight",
+          "source": "Pembina Institute"
+        },
+        {
+          "title": "Electricity September 8, 2026 Publication Budget 2026 Pembina Institute comments and recommendations",
+          "url": "https://www.pembina.org/pub/budget-2026",
+          "source": "Pembina Institute"
+        },
+        {
+          "title": "Buildings September 3, 2026 Article Canada can use modern construction to build and retrofit faster To scale up prefabrication, Canada needs a steady flow of projects, supportive programs, and investment in workers and manufacturing",
+          "url": "https://www.pembina.org/blog/canada-can-use-modern-construction-build-retrofit-faster",
+          "source": "Pembina Institute"
+        },
+        {
+          "title": "Oil & Gas September 2, 2026 Article Fuelling Canada’s oil and gas emissions Proposed oil and gas projects will only increase emissions from Canada’s highest emitting sector",
+          "url": "https://www.pembina.org/blog/fuelling-canadas-oil-gas-emissions",
+          "source": "Pembina Institute"
+        },
+        {
+          "title": "Buildings August 31, 2026 Publication Commercial Property Assessed Clean Energy (C-PACE) Financing in Ontario Pembina Institute Recommendations to the Ontario Ministry of Municipal Affairs and Housing",
+          "url": "https://www.pembina.org/pub/commercial-property-assessed-clean-energy-c-pace-financing-ontario",
+          "source": "Pembina Institute"
+        }
+      ]
+    },
+    {
+      "name": "Ecotrust",
+      "url": "https://ecotrust.org/stories-news/publications-reports/",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://ecotrust.org/stories-news/publications-reports/",
+      "error": null,
+      "reports_found": 6,
+      "reports": [
+        {
+          "title": "Indigenous Agroforestry Cultural Practitioner Survey Report",
+          "url": "https://ecotrust.org/publications/ian-cultural-practitioner-survey-report/",
+          "source": "Ecotrust"
+        },
+        {
+          "title": "Indigenous Agroforestry Technology & Tools Needs Survey Report",
+          "url": "https://ecotrust.org/publications/indigenous-agroforestry-technology-tools-needs-survey-report/",
+          "source": "Ecotrust"
+        },
+        {
+          "title": "American Shad: Strategies for population control through development of harvest and market channels",
+          "url": "https://ecotrust.org/publications/american-shad-strategies-for-population-control-through-development-of-harvest-and-market-channels/",
+          "source": "Ecotrust"
+        },
+        {
+          "title": "Indigenous Agroforestry Survey Report",
+          "url": "https://ecotrust.org/publications/indigenous-agroforestry-survey-report/",
+          "source": "Ecotrust"
+        },
+        {
+          "title": "Building a Tribal Forestry Workforce in the Pacific Northwest & Beyond",
+          "url": "https://ecotrust.org/publications/building-a-tribal-forestry-workforce-in-the-pacific-northwest-beyond/",
+          "source": "Ecotrust"
+        },
+        {
+          "title": "Ag of the Middle Accelerator Program Evaluation – Executive Summary",
+          "url": "https://ecotrust.org/publications/ag-of-the-middle-accelerator-program-evaluation-executive-summary/",
+          "source": "Ecotrust"
+        }
+      ]
+    },
+    {
+      "name": "Nature Conservancy",
+      "url": "https://www.nature.org/en-us/what-we-do/our-insights/reports/",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://www.nature.org/en-us/what-we-do/our-insights/reports/",
+      "error": null,
+      "reports_found": 6,
+      "reports": [
+        {
+          "title": "Freshwater Impact Report 2025",
+          "url": "https://www.nature.org/content/dam/tnc/nature/en/documents/f/r/Freshwater-Impact-Report-2025-Final.pdf",
+          "source": "Nature Conservancy"
+        },
+        {
+          "title": "Biodiversity Benefit Accounting",
+          "url": "https://www.nature.org/content/dam/tnc/nature/en/documents/b/i/Biodiversity_Benefit_Accounting.pdf",
+          "source": "Nature Conservancy"
+        },
+        {
+          "title": "Accurately Estimating Catch",
+          "url": "https://www.nature.org/content/dam/tnc/nature/en/documents/t/n/TNC-Utas-2025-estimatingCatch.pdf",
+          "source": "Nature Conservancy"
+        },
+        {
+          "title": "Accurately Estimating Catch",
+          "url": "https://www.nature.org/content/dam/tnc/nature/en/documents/0/9/092925_ThePowerofPolicy_FINAL.pdf",
+          "source": "Nature Conservancy"
+        },
+        {
+          "title": "Water Quality Benefit Accounting Guide",
+          "url": "https://www.nature.org/content/dam/tnc/nature/en/documents/w/a/Water_Quality_Benefit_Accounting.pdf",
+          "source": "Nature Conservancy"
+        },
+        {
+          "title": "Shark Bycatch Mitigation Decision Support Tool",
+          "url": "https://www.nature.org/content/dam/tnc/nature/en/documents/t/n/TNC_Shark_Bycatch_Mitigation_DST.pdf",
+          "source": "Nature Conservancy"
+        }
+      ]
+    },
+    {
+      "name": "IISD",
+      "url": "https://www.iisd.org/publications",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://www.iisd.org/publications",
+      "error": null,
+      "reports_found": 6,
+      "reports": [
+        {
+          "title": "Mapping Indonesia’s Nickel and Cobalt Value Chain",
+          "url": "https://www.iisd.org/publications/report/indonesia-nickel-cobalt-value-chain",
+          "source": "IISD",
+          "excerpt": "This report explores how Indonesia can capture more value from nickel and cobalt while navigating environmental, social, and governance, technology, and geopolitical risks.",
+          "publish_date": "2026-09-16",
+          "content_type": "Report"
+        },
+        {
+          "title": "Lithium Mining in Australia",
+          "url": "https://www.iisd.org/publications/report/lithium-mining-australia",
+          "source": "IISD",
+          "excerpt": "This case study describes Western Australia's environmental challenges and associated social issues related to lithium mining and examines policy measures for management.",
+          "publish_date": "2026-09-15",
+          "content_type": "Report"
+        },
+        {
+          "title": "Lithium Mining in Chile",
+          "url": "https://www.iisd.org/publications/report/lithium-mining-chile",
+          "source": "IISD",
+          "excerpt": "This case study describes Chile’s environmental challenges and associated social issues relating to lithium extraction from brine and examines the country’s policy measures for managing them.",
+          "publish_date": "2026-09-15",
+          "content_type": "Report"
+        },
+        {
+          "title": "Guidance Handbook for the Revised Common Investment Area",
+          "url": "https://www.iisd.org/publications/guide/handbook-revised-common-investment-area",
+          "source": "IISD",
+          "excerpt": "A practical guide to help member states of the Common Market for Eastern and Southern Africa (COMESA) translate the revised Common Investment Area (CCIA) Agreement into national legal and institutional action.",
+          "publish_date": "2026-09-11",
+          "content_type": "Guide"
+        },
+        {
+          "title": "Spending Public Money Smarter for Energy Security",
+          "url": "https://www.iisd.org/publications/digital-story/spending-public-money-smarter-energy-security",
+          "source": "IISD",
+          "excerpt": "Four energy-importing countries show how public financial support for clean energy can reduce exposure to fossil fuel price shocks.",
+          "publish_date": "2026-09-11",
+          "content_type": "Digital Story"
+        },
+        {
+          "title": "From Patchwork to Production",
+          "url": "https://www.iisd.org/publications/digital-story/patchwork-production",
+          "source": "IISD",
+          "excerpt": "Canadian waters hold some of the world's most promising offshore wind resources, but incomplete and fragmented regulations threaten to leave that potential stranded. Getting the rules right is now a strategic imperative.",
+          "publish_date": "2026-09-09",
+          "content_type": "Digital Story"
+        }
+      ]
+    },
+    {
+      "name": "Ecologic Institute",
+      "url": "https://www.ecologic.eu/publications",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://www.ecologic.eu/publications",
+      "error": null,
+      "reports_found": 6,
+      "reports": [
+        {
+          "title": "Sustainability in Pharmaceutical and Medical Education",
+          "url": "https://www.ecologic.eu/20668",
+          "source": "Ecologic Institute",
+          "publish_date": "2026-01-01"
+        },
+        {
+          "title": "Challenges and Priorities for Germany’s Climate Diplomacy",
+          "url": "https://www.ecologic.eu/20145",
+          "source": "Ecologic Institute",
+          "publish_date": "2026-01-01"
+        },
+        {
+          "title": "Europe's Diversification Paradox",
+          "url": "https://www.ecologic.eu/20659",
+          "source": "Ecologic Institute",
+          "publish_date": "2026-01-01"
+        },
+        {
+          "title": "Bleiben Carbon Farming-Zertifikate ein Ladenhüter?",
+          "url": "https://www.ecologic.eu/20638",
+          "source": "Ecologic Institute",
+          "publish_date": "2026-01-01"
+        },
+        {
+          "title": "Connecting the Dots on EU Transition Governance",
+          "url": "https://www.ecologic.eu/20654",
+          "source": "Ecologic Institute",
+          "publish_date": "2026-01-01"
+        },
+        {
+          "title": "Environmental Pharmaceutical Index – a practical information, classification and dissemination system for medication in Germany",
+          "url": "https://www.ecologic.eu/20572",
+          "source": "Ecologic Institute",
+          "publish_date": "2026-01-01"
+        }
+      ]
+    },
+    {
+      "name": "IEEP",
+      "url": "https://ieep.eu/publications/",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://ieep.eu/publications/",
+      "error": null,
+      "reports_found": 6,
+      "reports": [
+        {
+          "title": "Supporting a systemic transition for the livestock and protein sectors",
+          "url": "https://ieep.eu/publications/supporting-a-systemic-transition-for-the-livestock-and-protein-sectors/",
+          "source": "IEEP"
+        },
+        {
+          "title": "Beyond the Border: EU climate ambition through the lens of embedded emissions",
+          "url": "https://ieep.eu/publications/beyond-the-border-eu-climate-ambition-through-the-lens-of-embedded-emissions/",
+          "source": "IEEP"
+        },
+        {
+          "title": "Ban on coal-fired boilers: Madrid case study",
+          "url": "https://ieep.eu/publications/ban-on-coal-fired-boilers-madrid-case-study/",
+          "source": "IEEP"
+        },
+        {
+          "title": "Local participation in the European energy transition — MEP Roundtable",
+          "url": "https://ieep.eu/publications/local-participation-in-the-european-energy-transition-mep-roundtable/",
+          "source": "IEEP"
+        },
+        {
+          "title": "Strengthening the policy framework for ReCAP: barriers, enablers, and policy opportunities",
+          "url": "https://ieep.eu/publications/strengthening-the-policy-framework-for-recap-barriers-enablers-and-policy-opportunities/",
+          "source": "IEEP"
+        },
+        {
+          "title": "The CRCF framework: Current policy direction and the climate transition needs of EU agriculture",
+          "url": "https://ieep.eu/publications/the-crcf-framework-current-policy-direction-and-the-climate-transition-needs-of-eu-agriculture/",
+          "source": "IEEP"
+        }
+      ]
+    },
+    {
+      "name": "IUCN",
+      "url": "https://iucn.org/press-releases",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://iucn.org/press-releases",
+      "error": null,
+      "reports_found": 6,
+      "reports": [
+        {
+          "title": "IUCN welcomes first Patron of Nature from West Africa",
+          "url": "https://iucn.org/press-release/202609/iucn-welcomes-first-patron-nature-west-africa",
+          "source": "IUCN"
+        },
+        {
+          "title": "One year countdown begins to IUCN World Protected and Conserved Areas Congress",
+          "url": "https://iucn.org/press-release/202609/one-year-countdown-begins-iucn-world-protected-and-conserved-areas-congress",
+          "source": "IUCN"
+        },
+        {
+          "title": "Global land restoration gains ground, but delivers only 10% of national pledges – IUCN report",
+          "url": "https://iucn.org/press-release/202608/global-land-restoration-gains-ground-delivers-only-10-national-pledges-iucn",
+          "source": "IUCN"
+        },
+        {
+          "title": "Seven IUCN-recommended Natural and Mixed sites join UNESCO World Heritage List",
+          "url": "https://iucn.org/press-release/202607/seven-iucn-recommended-natural-and-mixed-sites-join-unesco-world-heritage-list",
+          "source": "IUCN"
+        },
+        {
+          "title": "From desert frog to deep-sea molluscs, remarkable species at risk – IUCN Red List",
+          "url": "https://iucn.org/press-release/202607/desert-frog-deep-sea-molluscs-remarkable-species-risk-iucn-red-list",
+          "source": "IUCN"
+        },
+        {
+          "title": "Luxembourg and IUCN launch third phase of pioneering Blue Natural Capital Financing Facility, putting coastal communities at its heart",
+          "url": "https://iucn.org/press-release/202607/luxembourg-and-iucn-launch-third-phase-pioneering-blue-natural-capital",
+          "source": "IUCN"
+        }
+      ]
+    },
+    {
+      "name": "Stockholm Resilience",
+      "url": "https://www.stockholmresilience.org/publications.html",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://www.stockholmresilience.org/publications.html",
+      "error": null,
+      "reports_found": 6,
+      "reports": [
+        {
+          "title": "Reservoir releases and land cover interact to drive event-scale nitrate export in a large agricultural basin",
+          "url": "https://www.stockholmresilience.org/publications/publications/2026-09-16-reservoir-releases-and-land-cover-interact-to-drive-event-scale-nitrate-export-in-a-large-agricultural-basin.html",
+          "source": "Stockholm Resilience"
+        },
+        {
+          "title": "Mapping the equity of food system landscapes: A Metacoupling approach",
+          "url": "https://www.stockholmresilience.org/publications/publications/2026-09-16-mapping-the-equity-of-food-system-landscapes-a-metacoupling-approach.html",
+          "source": "Stockholm Resilience"
+        },
+        {
+          "title": "Governing local and regional food systems for resilience - accounting for multi-agency interactions in practice",
+          "url": "https://www.stockholmresilience.org/publications/publications/2026-09-15-governing-local-and-regional-food-systems-for-resilience---accounting-for-multi-agency-interactions-in-practice.html",
+          "source": "Stockholm Resilience"
+        },
+        {
+          "title": "Building up the middle of municipal food systems: understanding challenges for public food procurement from local and regional farmers in practice",
+          "url": "https://www.stockholmresilience.org/publications/publications/2026-09-15-building-up-the-middle-of-municipal-food-systems-understanding-challenges-for-public-food-procurement-from-local-and-regional-farmers-in-practice.html",
+          "source": "Stockholm Resilience"
+        },
+        {
+          "title": "Evaluating practice-based intervention strategies for collaborative sustainable food supply chains: international experiences",
+          "url": "https://www.stockholmresilience.org/publications/publications/2026-09-15-evaluating-practice-based-intervention-strategies-for-collaborative-sustainable-food-supply-chains-international-experiences.html",
+          "source": "Stockholm Resilience"
+        },
+        {
+          "title": "What evidence exists regarding the impact of biodiversity on human health and well-being? A systematic map protocol",
+          "url": "https://www.stockholmresilience.org/publications/publications/2026-08-31-what-evidence-exists-regarding-the-impact-of-biodiversity-on-human-health-and-well-being-a-systematic-map-protocol.html",
+          "source": "Stockholm Resilience"
+        }
+      ]
+    },
+    {
+      "name": "Biodiversity Council",
+      "url": "https://biodiversitycouncil.org.au/resources?category=Report",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://biodiversitycouncil.org.au/resources?category=Report",
+      "error": null,
+      "reports_found": 4,
+      "reports": [
+        {
+          "title": "Cracking the code: Using nature data to understand the impact of the ASX200",
+          "url": "https://biodiversitycouncil.org.au/resources/cracking-the-code-using-nature-data-to-understand-the-impact-of-the-asx-200-1",
+          "source": "Biodiversity Council"
+        },
+        {
+          "title": "Appendices for report 'Cracking the code: Using nature data to understand the impact of the ASX200'",
+          "url": "https://biodiversitycouncil.org.au/resources/appendices-cracking-the-code-using-nature-data-to-understand-the-impact-of-the-asx-200",
+          "source": "Biodiversity Council"
+        },
+        {
+          "title": "2026-27 Federal Government spending on nature-related programs",
+          "url": "https://biodiversitycouncil.org.au/resources/2026-27-federal-budget-analysis-for-nature",
+          "source": "Biodiversity Council"
+        },
+        {
+          "title": "Key actions needed to respond to South Australia's catastrophic toxic algal bloom",
+          "url": "https://biodiversitycouncil.org.au/resources/key-actions-needed-SA-toxic-algal-bloom",
+          "source": "Biodiversity Council"
+        }
+      ]
+    },
+    {
+      "name": "Lincoln Institute",
+      "url": "https://www.lincolninst.edu/publications/policy-focus-reports-policy-briefs/",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://www.lincolninst.edu/publications/policy-focus-reports-policy-briefs/",
+      "error": null,
+      "reports_found": 6,
+      "reports": [
+        {
+          "title": "Equity in Nature-Based Solutions",
+          "url": "https://www.lincolninst.edu/publications/policy-briefs/equity-in-nature-based-solutions/",
+          "source": "Lincoln Institute"
+        },
+        {
+          "title": "Mejorar el financiamiento por incremento impositivo (TIF) para el desarrollo económico",
+          "url": "https://www.lincolninst.edu/publications/policy-focus-reports/mejorar-financiamiento-incremento-impositivo-tif-desarrollo-economico/",
+          "source": "Lincoln Institute"
+        },
+        {
+          "title": "Planning in a Polycrisis",
+          "url": "https://www.lincolninst.edu/publications/policy-briefs/planning-in-polycrisis/",
+          "source": "Lincoln Institute"
+        },
+        {
+          "title": "Planning in a Polycrisis",
+          "url": "https://www.lincolninst.edu/publications/policy-focus-reports/planning-in-polycrisis/",
+          "source": "Lincoln Institute"
+        },
+        {
+          "title": "Using Public Land for Affordable Housing",
+          "url": "https://www.lincolninst.edu/publications/policy-downloads/using-public-land-affordable-housing-considerations-policymakers/",
+          "source": "Lincoln Institute"
+        },
+        {
+          "title": "Understanding State Property Tax Limits",
+          "url": "https://www.lincolninst.edu/publications/policy-downloads/understanding-state-property-tax-limits/",
+          "source": "Lincoln Institute"
+        }
+      ]
+    },
+    {
+      "name": "UN-Habitat",
+      "url": "https://unhabitat.org/knowledge/research-and-publications",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://unhabitat.org/knowledge/research-and-publications",
+      "error": null,
+      "reports_found": 1,
+      "reports": [
+        {
+          "title": "World Cities Report 2026: The Global Housing Crisis: Pathways to Action",
+          "url": "https://unhabitat.org/world-cities-report-2026",
+          "source": "UN-Habitat"
+        }
+      ]
+    },
+    {
+      "name": "Nature Cities",
+      "url": "https://www.nature.com/natcities/reviews-and-analysis",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://www.nature.com/natcities/reviews-and-analysis",
+      "error": null,
+      "reports_found": 6,
+      "reports": [
+        {
+          "title": "Global characterization of building-level weight reveals urban material inequality",
+          "url": "https://www.nature.com/articles/s44284-026-00509-w",
+          "source": "Nature Cities"
+        },
+        {
+          "title": "How landscapes shaped the spatial foundations of cities in pre-state China",
+          "url": "https://www.nature.com/articles/s44284-026-00524-x",
+          "source": "Nature Cities"
+        },
+        {
+          "title": "Urban deprivation map highlights a hidden burden beyond megacities",
+          "url": "https://www.nature.com/articles/s44284-026-00497-x",
+          "source": "Nature Cities"
+        },
+        {
+          "title": "Generative AI in urban science and practice",
+          "url": "https://www.nature.com/articles/s44284-026-00492-2",
+          "source": "Nature Cities"
+        },
+        {
+          "title": "Cities, not rural areas, power the digital infrastructure of the USA",
+          "url": "https://www.nature.com/articles/s44284-026-00488-y",
+          "source": "Nature Cities"
+        },
+        {
+          "title": "The Indian street dog crisis and multispecies coexistence in tropical urban futures",
+          "url": "https://www.nature.com/articles/s44284-026-00476-2",
+          "source": "Nature Cities"
+        }
+      ]
+    },
+    {
+      "name": "Land Use Policy",
+      "url": "https://rss.sciencedirect.com/publication/science/02648377",
+      "status": "success",
+      "status_code": 200,
+      "final_url": "https://rss.sciencedirect.com/publication/science/02648377",
+      "error": null,
+      "reports_found": 6,
+      "reports": [
+        {
+          "title": "Improving landcover data governance in developing countries",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0264837726004321?dgcid=rss_sd_all",
+          "source": "Land Use Policy",
+          "publish_date": "January 2027",
+          "citation": "期刊卷期：Land Use Policy, Volume 172；出版月：January 2027；作者：Xavier G.H. Koenig, Prakash N.K. Deenapanray",
+          "pii": "S0264837726004321"
+        },
+        {
+          "title": "Impact of climate change on agricultural land prices",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0264837726004217?dgcid=rss_sd_all",
+          "source": "Land Use Policy",
+          "publish_date": "January 2027",
+          "citation": "期刊卷期：Land Use Policy, Volume 172；出版月：January 2027；作者：Prashant Das",
+          "pii": "S0264837726004217"
+        },
+        {
+          "title": "Unveiling the impacts of high-standard farmland construction on climate-smart agriculture",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0264837726004229?dgcid=rss_sd_all",
+          "source": "Land Use Policy",
+          "publish_date": "January 2027",
+          "citation": "期刊卷期：Land Use Policy, Volume 172；出版月：January 2027；作者：Yao Yao, Lisi Ling, Xu Bi, Chunhua Li, Xueyuan Chen, Guy M. Robinson",
+          "pii": "S0264837726004229"
+        },
+        {
+          "title": "Analysis of the planning and design strategies for flood resilience and transit-oriented development conducted using the analytic network process",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0264837726004175?dgcid=rss_sd_all",
+          "source": "Land Use Policy",
+          "publish_date": "January 2027",
+          "citation": "期刊卷期：Land Use Policy, Volume 172；出版月：January 2027；作者：Wann-Ming Wey, Sun-Weng Huang",
+          "pii": "S0264837726004175"
+        },
+        {
+          "title": "Can property rights delineation incentivize farming households’ consumption? An analysis from the perspective of precautionary savings",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0264837726004230?dgcid=rss_sd_all",
+          "source": "Land Use Policy",
+          "publish_date": "January 2027",
+          "citation": "期刊卷期：Land Use Policy, Volume 172；出版月：January 2027；作者：Tong Liu, Xin Qi",
+          "pii": "S0264837726004230"
+        },
+        {
+          "title": "CAP regime shifts, institutional quality, and technical efficiency in agricultural land use across the EU: A panel stochastic frontier analysis",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0264837726004096?dgcid=rss_sd_all",
+          "source": "Land Use Policy",
+          "publish_date": "January 2027",
+          "citation": "期刊卷期：Land Use Policy, Volume 172；出版月：January 2027；作者：Daniel Petrov, Anton Mitov",
+          "pii": "S0264837726004096"
+        }
+      ]
+    }
+  ]
+}

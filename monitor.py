@@ -226,7 +226,11 @@ class WebsiteMonitor:
                         if self.ai_summarizer.is_configured():
                             try:
                                 logger.info(f"开始AI总结: {title[:30]}...")
-                                ai_summary_data = self.ai_summarizer.summarize_report(url, title)
+                                ai_summary_data = self.ai_summarizer.summarize_report(
+                                    url, title,
+                                    excerpt=report.get('excerpt'),
+                                    citation=report.get('citation')
+                                )
                                 if ai_summary_data:
                                     db.update_ai_summary_by_url(
                                         url=url,
@@ -702,7 +706,11 @@ class MultiWebsiteMonitor:
                         if self.ai_summarizer.is_configured():
                             try:
                                 logger.info(f"开始AI总结: {title[:30]}...")
-                                ai_summary_data = self.ai_summarizer.summarize_report(url, title)
+                                ai_summary_data = self.ai_summarizer.summarize_report(
+                                    url, title,
+                                    excerpt=report.get('excerpt'),
+                                    citation=report.get('citation')
+                                )
                                 if ai_summary_data:
                                     db.update_ai_summary_by_url(
                                         url=url,

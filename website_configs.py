@@ -6,6 +6,7 @@
 from typing import List, Dict, Callable, Optional
 from urllib.parse import urljoin, urlsplit
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -60,11 +61,18 @@ class WebsiteConfig:
                 continue
                 
             if self._is_report_link(report['url'], cleaned_title):
-                filtered_reports.append({
+                enriched = {
                     'title': cleaned_title,
                     'url': report['url'],
                     'source': self.name
-                })
+                }
+                # 保留解析阶段收集到的富字段（列表页简介、发布日期、题录等），
+                # 供 AI 摘要在详情页不可读时作为兜底内容来源。
+                for key in ('excerpt', 'publish_date', 'content_type', 'citation', 'doi', 'pii'):
+                    value = report.get(key)
+                    if value:
+                        enriched[key] = value
+                filtered_reports.append(enriched)
         
         # 去重
         unique_reports = []
@@ -256,9 +264,20 @@ class WebsiteConfig:
         parsed_url = urlsplit(url)
         url_lower = (parsed_url.netloc + parsed_url.path).lower()
         title_lower = title.lower()
-        
+
         for keyword in exclude_keywords:
-            if keyword in url_lower or keyword in title_lower:
+            if ' ' in keyword:
+                # 多词短语按子串匹配即可，例如 "read more"、"privacy policy"。
+                if keyword in url_lower or keyword in title_lower:
+                    return False
+                continue
+            # 单词只按路径片段匹配：子串匹配会把 slug 里的正常词
+            # （如 "electric-vehicles-brics-countries"）误判为导航。
+            if keyword in re.split(r'[^a-z0-9]+', url_lower):
+                return False
+            # 标题里的单词只对短标题生效，导航标签都很短；
+            # 长标题出现 "more"/"page" 等词属于正常表达。
+            if len(title_lower) <= 30 and keyword in title_lower:
                 return False
         
         # 检查URL是否可能是报告链接
@@ -961,23 +980,111 @@ def nature_conservancy_parser(html_content: str, base_url: str) -> List[Dict[str
     return unique_reports
 
 
+_ENGLISH_MONTHS = {
+    'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+    'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11,
+    'december': 12, 'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'jun': 6,
+    'jul': 7, 'aug': 8, 'sep': 9, 'sept': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+}
+
+
+def normalize_listing_date(text: str) -> Optional[str]:
+    """把列表页英文日期（如 "September 16, 2026"）转成 YYYY-MM-DD。
+
+    使用英文月份表而不是 strptime，避免服务器区域设置影响解析。
+    """
+    import re
+
+    if not text:
+        return None
+
+    match = re.search(r'([A-Za-z]{3,9})\.?\s+(\d{1,2}),\s*(\d{4})', text)
+    if not match:
+        return None
+
+    month = _ENGLISH_MONTHS.get(match.group(1).lower())
+    if not month:
+        return None
+
+    try:
+        day = int(match.group(2))
+        year = int(match.group(3))
+    except ValueError:
+        return None
+
+    if not 1 <= day <= 31:
+        return None
+    return f'{year:04d}-{month:02d}-{day:02d}'
+
+
 def iisd_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
     """
     IISD (International Institute for Sustainable Development) 出版物页面解析器
-    页面使用article元素，链接包含/publications/路径
+
+    列表页（https://www.iisd.org/publications）为 Drupal 渲染的静态 HTML，
+    每条出版物是 article.c-list-item，包含标题、简介、类型和日期。
+    出版物详情页受 Cloudflare 人机校验保护（对服务器返回 403），因此把列表页简介
+    作为内容兜底，随解析结果一起返回，供 AI 摘要在没有正文时使用。
     """
     from bs4 import BeautifulSoup
-    
+    import re
+
     if not html_content:
         return []
-    
+
     reports = []
     soup = BeautifulSoup(html_content, 'lxml')
-    
-    # IISD特定选择器（基于分析）
+
+    seen_urls = set()
+    cards = soup.select('article.c-list-item')
+    if not cards:
+        cards = soup.select('.c-listing__items article')
+
+    for card in cards:
+        link = (card.select_one('.c-list-item__heading a')
+                or card.select_one('h3 a') or card.select_one('h2 a')
+                or card.find('a', href=True))
+        if link is None:
+            continue
+
+        href = (link.get('href') or '').strip()
+        if not href:
+            continue
+
+        full_url = urljoin(base_url, href)
+        if '/publications/' not in full_url.lower() or full_url in seen_urls:
+            continue
+
+        title = (link.get('title') or '').strip() or link.get_text(' ', strip=True)
+        title = ' '.join(title.split())
+        if len(title) < 10:
+            continue
+
+        seen_urls.add(full_url)
+        report = {'title': title, 'url': full_url, 'source': 'IISD'}
+
+        excerpt_tag = card.select_one('.c-list-item__excerpt')
+        if excerpt_tag is not None:
+            excerpt = ' '.join(excerpt_tag.get_text(' ', strip=True).split())
+            if len(excerpt) >= 40:
+                report['excerpt'] = excerpt
+
+        subtype_tag = card.select_one('.c-list-item__meta-subtype')
+        if subtype_tag is not None:
+            subtype = ' '.join(subtype_tag.get_text(' ', strip=True).split())
+            if subtype:
+                report['content_type'] = subtype
+
+        date_tag = card.select_one('.c-list-item__meta-date')
+        if date_tag is not None:
+            publish_date = normalize_listing_date(date_tag.get_text(' ', strip=True))
+            if publish_date:
+                report['publish_date'] = publish_date
+
+        reports.append(report)
+
+    # 卡片结构变化时的兜底：退回通用链接扫描（不含简介，仅保证不漏条目）。
     selectors = [
-        '.publication a',
-        '.report a',
         'article.publication a',
         'article.report a',
         '.report-item a',
@@ -990,51 +1097,54 @@ def iisd_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
         '.title a',
         '.entry-title a'
     ]
-    
-    for selector in selectors:
-        links = soup.select(selector)
-        if links:
+
+    # 如果卡片选择器都没匹配到，退回通用链接扫描
+    if not reports:
+        for selector in selectors:
+            links = soup.select(selector)
+            if not links:
+                continue
             for link in links:
                 title = link.text.strip()
                 href = link.get('href', '')
-                
+
                 if href and title:
                     full_url = urljoin(base_url, href)
                     # 检查是否是出版物链接
-                    if '/publications/' in full_url.lower():
+                    if '/publications/' in full_url.lower() and full_url not in seen_urls:
+                        seen_urls.add(full_url)
                         reports.append({
                             'title': title,
                             'url': full_url,
                             'source': 'IISD'
                         })
-            break
-    
-    # 如果上述选择器都没找到，查找包含特定路径的链接
+            if reports:
+                break
+
     if not reports:
         all_links = soup.find_all('a', href=True)
         for link in all_links:
             href = link['href']
             title = link.text.strip()
-            
+
             # 过滤可能的出版物链接
-            if ('/publications/' in href.lower() or 
+            if ('/publications/' in href.lower() or
                 '/report/' in href.lower() or
                 '/article/' in href.lower() or
                 '/blog/' in href.lower() or
-                '/newsletter/' in href.lower()) and len(title) > 10:
+                '/newsletter/' in href.lower()) and len(title) > 10 and href not in seen_urls:
                 full_url = urljoin(base_url, href)
                 reports.append({
                     'title': title,
                     'url': full_url,
                     'source': 'IISD'
                 })
-    
+
     # 清理标题：移除日期和其他冗余信息
     for report in reports:
         title = report['title']
-        
+
         # 移除日期模式（如 "February 2026"）
-        import re
         date_patterns = [
             r'January \d{4}',
             r'February \d{4}',
@@ -1049,24 +1159,25 @@ def iisd_parser(html_content: str, base_url: str) -> List[Dict[str, str]]:
             r'November \d{4}',
             r'December \d{4}'
         ]
-        
+
         for pattern in date_patterns:
             title = re.sub(pattern, '', title, flags=re.IGNORECASE).strip()
-        
+
         # 移除多余空白
         title = ' '.join(title.split())
-        
+
         if len(title) > 10:
             report['title'] = title
-    
-    # 去重
+
+    # 去重（兜底分支可能产生重复URL）
     unique_reports = []
-    seen_urls = set()
+    seen = set()
     for report in reports:
-        if report['url'] not in seen_urls:
-            seen_urls.add(report['url'])
-            unique_reports.append(report)
-    
+        if report['url'] in seen:
+            continue
+        seen.add(report['url'])
+        unique_reports.append(report)
+
     return unique_reports
 
 
@@ -2579,12 +2690,24 @@ def sciencedirect_rss_parser(rss_content: str, base_url: str) -> List[Dict[str, 
     """
     ScienceDirect RSS 解析器
     用于解析期刊RSS订阅，获取最新文章
+
+    RSS 只提供题录（标题、作者、卷期、出版月），不含摘要；文章页
+    （www.sciencedirect.com/science/article/pii/...）对非浏览器请求返回 403。
+    因此这里额外返回 PII 和题录信息，供 AI 摘要模块据此解析 DOI 并查找公开摘要。
     """
     import re
     import xml.etree.ElementTree as ET
 
     if not rss_content:
         return []
+
+    def text_of(element) -> str:
+        if element is None:
+            return ''
+        # RSS 的 description 是 CDATA，标签会作为普通字符出现，需要手工剥离。
+        raw = ''.join(element.itertext())
+        raw = re.sub(r'<[^>]+>', ' ', raw)
+        return ' '.join(raw.split())
 
     reports = []
 
@@ -2611,21 +2734,43 @@ def sciencedirect_rss_parser(rss_content: str, base_url: str) -> List[Dict[str, 
             title = ' '.join(title.split())
 
             link = link_elem.text or ''
+            if not link:
+                continue
+
+            description = text_of(desc_elem)
 
             publish_date = None
-            if desc_elem is not None and desc_elem.text:
-                desc = desc_elem.text
-                date_match = re.search(r'Publication date: ([^<]+)', desc)
-                if date_match:
-                    publish_date = date_match.group(1).strip()
+            date_match = re.search(r'Publication date:\s*([^|]+?)(?:\s*Source:|\s*Author\(s\):|$)', description)
+            if date_match:
+                publish_date = date_match.group(1).strip()
 
-            if link:
-                reports.append({
-                    'title': title,
-                    'url': link,
-                    'source': 'Land Use Policy',
-                    'publish_date': publish_date
-                })
+            report = {
+                'title': title,
+                'url': link,
+                'source': 'Land Use Policy',
+                'publish_date': publish_date
+            }
+
+            pii_match = re.search(r'/science/article/pii/([A-Za-z0-9]+)', link)
+            if pii_match:
+                report['pii'] = pii_match.group(1)
+
+            # 题录信息：期刊卷期、作者、出版月。详情页不可读时，这是可用的最小上下文。
+            source_match = re.search(r'Source:\s*([^|]+?)(?:\s*Author\(s\):|$)', description)
+            authors_match = re.search(r'Author\(s\):\s*(.+)$', description)
+            citation_parts = []
+            if source_match:
+                citation_parts.append(f"期刊卷期：{source_match.group(1).strip()}")
+            if publish_date:
+                citation_parts.append(f"出版月：{publish_date}")
+            if authors_match:
+                authors = authors_match.group(1).strip()
+                citation_parts.append(f"作者：{authors[:200]}")
+                report['authors'] = authors[:300]
+            if citation_parts:
+                report['citation'] = '；'.join(citation_parts)
+
+            reports.append(report)
 
     except ET.ParseError as e:
         logging.warning(f"RSS解析错误: {e}")
